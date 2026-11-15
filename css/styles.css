@@ -1,0 +1,35 @@
+    body, button, input, select, textarea {
+      font-family: 'League Spartan', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #f8fafc;
+    }
+    html[lang="te"] body, html[lang="te"] button, html[lang="te"] input, html[lang="te"] select, html[lang="te"] textarea {
+      font-family: 'Mandali', sans-serif;
+      font-style: bold;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .tap-btn {
+      transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .tap-btn:active {
+      transform: scale(0.96);
+    }
+    .herd-swipe-track {
+      touch-action: pan-y;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+    .shake {
+      animation: shake 0.28s ease-in-out;
+    }

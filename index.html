@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dairy Khata — పాల డైరీ ఖర్చుల లెక్క</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/styles.css" />
+  <link rel="stylesheet" href="./css/redesign.css" />
+</head>
+<body class="min-h-screen text-slate-900 pb-24 md:pb-10 antialiased">
+
+  <!-- Clean Top App Bar -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h1 id="app-title" class="text-base font-extrabold text-slate-900 tracking-tight truncate leading-tight">డైరీ ఖాతా</h1>
+          <p id="app-subtitle" class="text-[11px] font-medium text-slate-500 truncate">సులభమైన ఖర్చుల లెక్క</p>
+        </div>
+      </div>
+
+      <!-- Desktop Website Navigation -->
+      <div class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+        <button id="dnav-buffalo" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-emerald-700 shadow-xs">🐃 Buffaloes</button>
+        <button id="dnav-add" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">➕ Add Entry</button>
+        <button id="dnav-health" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">🩺 Meds &amp; Vet</button>
+        <button id="dnav-history" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">👑 Admin</button>
+      </div>
+        <button id="btn-owner-lock" type="button" aria-label="Admin access" class="tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 border transition-colors bg-slate-100 text-slate-600 border-slate-200 shrink-0">
+          <span id="lock-icon">🔒</span>
+          <span id="lbl-lock-status">Admin</span>
+        </button>
+        <!-- Language Switcher -->
+        <button id="btn-lang" type="button" class="tap-btn px-2.5 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-[11px]">
+          EN
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-3.5 md:px-6 pt-4">
+
+    <!-- Clean Today KPI Strip -->
+    <section class="mb-3.5">
+      <div class="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-xs text-center">
+        <div id="lbl-mini-exp" class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">నేటి ఖర్చు</div>
+        <div id="val-today-exp" class="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5 tabular-nums">₹0</div>
+      </div>
+      </section>
+
+    <!-- VIEW 1: ADD ENTRY -->
+    <section id="view-add" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div class="lg:col-span-7 space-y-3">
+
+      <!-- Author Selector Card -->
+      <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs">
+        <div class="flex items-center justify-between mb-2">
+          <span id="lbl-author" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">ఎవరు రాస్తున్నారు? (Author)</span>
+          <button id="btn-custom-author" type="button" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 px-2 py-0.5 rounded-lg bg-emerald-50">
+            + <span id="lbl-add-name">కొత్త పేరు</span>
+          </button>
+        </div>
+        <div id="author-pills" class="flex flex-wrap gap-1.5">
+          <!-- Populated by JS -->
+        </div>
+        <div id="custom-author-box" class="hidden mt-2.5 flex gap-2">
+          <input id="input-author-name" type="text" maxlength="24" placeholder="పేరు రాయండి / Enter name" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <button id="btn-save-author" type="button" class="tap-btn px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">Add</button>
+        </div>
+      </div>
+
+      <!-- Segmented Type Control -->
+      <div class="grid grid-cols-2 gap-1.5 bg-slate-200/70 p-1 rounded-2xl">
+        <button id="type-expense" type="button" class="tap-btn py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 bg-white text-rose-600 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          <span id="lbl-type-exp">ఖర్చు (Spent)</span>
+        </button>
+        <button id="type-income" type="button" class="tap-btn py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 text-slate-600">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="lbl-type-inc">ఆదాయం (Milk)</span>
+        </button>
+      </div>
+
+      <!-- Category Grid Card -->
+      <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs">
+        <div class="flex items-center justify-between mb-2.5">
+          <span id="lbl-step-cat" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">1. ఏమిటి? (బొమ్మ నొక్కండి)</span>
+        </div>
+        <div id="category-grid" class="grid grid-cols-3 gap-2">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      </div>
+      <!-- Amount & Keypad Card (Single-View Modal Sheet on Mobile, Right Column on Desktop) -->
+      <div id="calc-overlay" class="hidden lg:block lg:col-span-5 fixed inset-0 z-40 bg-slate-900/55 backdrop-blur-xs lg:static lg:bg-transparent lg:z-auto flex items-end lg:items-stretch justify-center p-0 lg:p-0">
+      <div class="w-full max-w-md lg:max-w-none bg-white rounded-t-3xl lg:rounded-2xl p-3.5 border border-slate-200/80 shadow-2xl lg:shadow-xs max-h-[92vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span id="calc-selected-badge" class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold">🌾 Feed</span>
+            <span id="lbl-step-amt" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">2. ఎంత డబ్బు? (₹)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="btn-clear-amt" type="button" class="text-[11px] font-bold text-rose-600 hover:bg-rose-50 px-2 py-0.5 rounded-lg">
+              <span id="lbl-clear">చెరిపివేయి</span>
+            </button>
+            <button id="btn-close-calc" type="button" class="lg:hidden w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center">✕</button>
+          </div>
+        </div>
+
+        <!-- Clean Hero Amount Display -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl px-4 py-3 mb-2.5 flex items-baseline justify-between shadow-inner">
+          <span id="calc-unit-prefix" class="text-xl font-bold text-emerald-400">₹</span>
+          <span id="amount-display" class="text-4xl font-extrabold tracking-tight tabular-nums">0</span>
+        </div>
+
+        <!-- Quick Add Pills -->
+        <div class="grid grid-cols-4 gap-1.5 mb-2.5">
+          <button type="button" data-add="50" class="quick-add tap-btn py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">+₹50</button>
+          <button type="button" data-add="100" class="quick-add tap-btn py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">+₹100</button>
+          <button type="button" data-add="500" class="quick-add tap-btn py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">+₹500</button>
+          <button type="button" data-add="1000" class="quick-add tap-btn py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">+₹1000</button>
+        </div>
+
+        <!-- Sleek Keypad -->
+        <div class="grid grid-cols-3 gap-1.5 mb-3">
+          <button type="button" data-key="1" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">1</button>
+          <button type="button" data-key="2" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">2</button>
+          <button type="button" data-key="3" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">3</button>
+          <button type="button" data-key="4" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">4</button>
+          <button type="button" data-key="5" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">5</button>
+          <button type="button" data-key="6" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">6</button>
+          <button type="button" data-key="7" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">7</button>
+          <button type="button" data-key="8" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">8</button>
+          <button type="button" data-key="9" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">9</button>
+          <button id="btn-key-00-dot" type="button" data-key="00" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-lg font-bold text-slate-600">00</button>
+          <button type="button" data-key="0" class="num-key tap-btn py-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-xl font-bold text-slate-800">0</button>
+          <button type="button" id="btn-backspace" class="tap-btn py-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200/60 text-lg font-bold text-rose-700 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"/></svg>
+          </button>
+        </div>
+
+        <!-- Animal Selector for Medicines / Doctor in Add Entry -->
+        <div id="calc-animal-wrap" class="hidden mb-2.5">
+          <label for="select-calc-animal" class="block text-[11px] font-bold text-slate-500 mb-1">🐃 Which Animal? (ఏ గేదె / ఆవు కోసం?)</label>
+          <select id="select-calc-animal" class="w-full px-3 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 text-xs font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+        </div>
+
+        <!-- Optional Short Note -->
+        <input id="input-note" type="text" maxlength="40" placeholder="చిన్న వివరం (ఐచ్ఛికం / Optional note)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-3" />
+
+        <div id="entry-date-wrap" class="hidden mb-3">
+          <label id="lbl-entry-date" for="input-entry-date" class="block text-[11px] font-bold text-slate-500 mb-1">Entry date (Admin)</label>
+          <input id="input-entry-date" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <!-- Primary Save CTA -->
+        <button id="btn-save" type="button" class="tap-btn w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          <span id="lbl-save">సేవ్ చేయి (SAVE)</span>
+        </button>
+      </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: BUFFALO & DAILY MILK TRACKER -->
+    <section id="view-buffalo" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div class="lg:col-span-5 space-y-3">
+
+      <!-- Herd & Today's Milk KPIs -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">🥛</div>
+          <div>
+            <div id="lbl-milk-today-kpi" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">నేటి పాలు</div>
+            <div id="val-milk-today" class="text-lg font-extrabold text-slate-900 tabular-nums">0 L</div>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xl shrink-0">🐃</div>
+          <div>
+            <div id="lbl-herd-kpi" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">పాలిచ్చేవి (Milking)</div>
+            <div id="val-herd-count" class="text-lg font-extrabold text-slate-900 tabular-nums">0</div>
+          </div>
+        </div>
+      </div>
+
+
+      </div>
+      <div class="lg:col-span-7 space-y-3">
+      <!-- Herd & Add New Buffalo Card -->
+      <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 id="lbl-herd-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">🐃 గేదెల వివరాలు (Herd)</h3>
+          <button id="btn-toggle-add-buffalo" type="button" class="tap-btn px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">
+            + <span id="lbl-new-buffalo">కొత్త గేదె</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Add New Buffalo Form -->
+        <div id="add-buffalo-form" class="hidden p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-2.5">
+          <input id="input-buf-name" type="text" maxlength="25" placeholder="గేదె పేరు / ట్యాగ్ నెం. (e.g. B-04 Lakshmi)" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <div class="grid grid-cols-3 gap-2">
+            <select id="input-buf-species" class="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none">
+              <option value="Buffalo">🐃 Buffalo</option>
+              <option value="Cow">🐄 Cow</option>
+            </select>
+            <select id="input-buf-breed" class="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none">
+              <option value="Murrah">Murrah</option>
+              <option value="Grade">Grade</option>
+              <option value="Jaffarabadi">Jaffarabadi</option>
+              <option value="HF / Jersey">HF / Jersey</option>
+              <option value="Gir / Ongole">Gir / Ongole</option>
+              <option value="Other">Other</option>
+            </select>
+            <input id="input-buf-price" type="number" min="0" placeholder="₹ Price" class="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-emerald-800 mb-1">Mother / Parent (తల్లి - Offspring Mapping)</label>
+            <select id="select-buf-mother" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none">
+              <option value="">None (Purchased / Founder)</option>
+            </select>
+          </div>
+          <button id="btn-save-buffalo" type="button" class="tap-btn w-full py-2.5 rounded-xl bg-emerald-700 text-white font-extrabold text-xs">
+            ✅ Add Animal to Herd
+          </button>
+        </div>
+
+        <!-- Filter Pills + Prev/Next Slide Controls (FreeUp-style) -->
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div id="herd-filter-pills" class="flex gap-1.5 flex-wrap">
+            <button type="button" data-hfilter="Buffalo" class="herd-filter-btn tap-btn flex items-center justify-center text-center px-3 py-1 rounded-full text-[15px] font-bold bg-slate-900 text-white">🐃 Buffaloes Only</button>
+            <button type="button" data-hfilter="Cow" class="herd-filter-btn tap-btn flex items-center justify-center text-center px-3 py-1 rounded-full text-[15px] font-bold bg-slate-100 text-slate-700">🐄 Cows</button>
+            <button type="button" data-hfilter="heirs" class="herd-filter-btn tap-btn flex items-center justify-center text-center px-3 py-1 rounded-full text-[15px] font-bold bg-slate-100 text-slate-700">👶 With Heirs</button>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button id="btn-herd-prev" type="button" aria-label="Previous animal" class="tap-btn w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">◀</button>
+            <span id="herd-card-position" class="min-w-10 text-center text-[11px] font-bold text-slate-500">1 / 1</span>
+            <button id="btn-herd-next" type="button" aria-label="Next animal" class="tap-btn w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">▶</button>
+          </div>
+        </div>
+
+        <!-- Single-card swipe milk logger -->
+        <div id="buffalo-herd-list" class="herd-swipe-track flex justify-center pb-2">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Family & Heir Tree Card -->
+      <!-- Adjusted / Water Added to Milk (To Meet Demand) -->
+      <div class="bg-white rounded-2xl p-3.5 border border-cyan-200/80 shadow-xs space-y-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 id="lbl-water-title" class="text-xs font-extrabold uppercase tracking-wider text-cyan-800">💧 Adjusted / Water Added (L)</h3>
+            <p id="lbl-water-sub" class="text-[10px] font-semibold text-slate-500">Log extra water/adjustment added to meet demand</p>
+          </div>
+          <span id="val-water-today" class="px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 text-[11px] font-extrabold">+0 L</span>
+        </div>
+        <div id="water-shift-box" class="bg-amber-50/70 border border-amber-200/80 p-2 rounded-xl space-y-2 transition-colors" data-shift="morning">
+          <div class="grid grid-cols-2 gap-1 bg-white/80 p-1 rounded-xl border border-slate-200/60">
+            <button type="button" data-watershift="morning" class="water-shift-tab tap-btn py-2 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-900 shadow-xs">${state.lang === 'te' ? '☀️ ఉదయం' : '☀️ Morning'}</button>
+            <button type="button" data-watershift="evening" class="water-shift-tab tap-btn py-2 rounded-lg text-xs font-bold text-slate-600">${state.lang === 'te' ? '🌙 సాయంత్రం' : '🌙 Evening'}</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="input-water-liters" type="number" step="0.5" min="0" max="999" placeholder="Water (L)" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-cyan-200 bg-white text-base font-extrabold text-cyan-700 text-right focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+            <button id="btn-save-water" type="button" class="tap-btn px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-extrabold text-xs shrink-0">సేవ్ 💧</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Milk Collection Log -->
+      <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs">
+        <h3 id="lbl-milk-log-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">నేటి పాల వివరాలు (Milk Log)</h3>
+        <div id="milk-log-list" class="space-y-2">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: MEDICINES & DOCTOR (SEPARATE TABS) -->
+    <section id="view-health" class="hidden space-y-3">
+
+      <!-- Separate Sub-Tabs: Medicines vs Doctor -->
+      <div class="grid grid-cols-2 gap-1.5 bg-slate-200/70 p-1 rounded-2xl">
+        <button id="subtab-meds" type="button" class="tap-btn py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 bg-white text-rose-700 shadow-sm">
+          <span>💊</span><span id="lbl-sub-meds">మందులు (Medicines)</span>
+        </button>
+        <button id="subtab-doc" type="button" class="tap-btn py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 text-slate-600">
+          <span>🩺</span><span id="lbl-sub-doc">డాక్టర్ (Doctor)</span>
+        </button>
+      </div>
+
+      <!-- SUB-TAB 1: MEDICINES -->
+      <div id="panel-meds" class="space-y-3">
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 id="lbl-med-form-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">💊 మందుల ఖర్చు (Medicine Log)</h2>
+            <span id="val-med-total" class="text-xs font-extrabold text-rose-600">₹0</span>
+          </div>
+
+          <div>
+            <label for="select-med-buffalo" class="block text-[11px] font-bold text-slate-500 mb-1">🐃 Which Animal? (ఏ గేదె / ఆవు కోసం?)</label>
+            <select id="select-med-buffalo" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5" id="med-quick-pills">
+            <button type="button" data-med="Calcium Tonic" class="med-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-900 text-white border-slate-900">Calcium</button>
+            <button type="button" data-med="Deworming" class="med-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-700 border-slate-200">Deworming</button>
+            <button type="button" data-med="Mineral Mix" class="med-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-700 border-slate-200">Mineral Mix</button>
+            <button type="button" data-med="Antibiotic" class="med-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-700 border-slate-200">Antibiotic</button>
+            <button type="button" data-med="Vitamin" class="med-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-700 border-slate-200">Vitamin</button>
+          </div>
+
+          <input id="input-med-name" type="text" maxlength="35" placeholder="మందు పేరు (లేదా పైన నొక్కండి) / Medicine name" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+
+          <div class="flex items-center gap-2">
+            <div class="flex-1 relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400">₹</span>
+              <input id="input-med-cost" type="number" min="0" placeholder="0" class="w-full pl-7 pr-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-extrabold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+            <button type="button" data-medadd="100" class="med-cost-btn tap-btn px-2.5 py-2.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-700">+100</button>
+            <button type="button" data-medadd="250" class="med-cost-btn tap-btn px-2.5 py-2.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-700">+250</button>
+            <button type="button" data-medadd="500" class="med-cost-btn tap-btn px-2.5 py-2.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-700">+500</button>
+          </div>
+
+          <button id="btn-save-med" type="button" class="tap-btn w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-sm shadow-md shadow-rose-600/20">
+            💊 <span id="lbl-save-med">మందు సేవ్ చేయి (Save Medicine)</span>
+          </button>
+        </div>
+
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs">
+          <h3 id="lbl-med-list-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">మందుల జాబితా (Medicine History)</h3>
+          <div id="med-log-list" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- SUB-TAB 2: DOCTOR VISITS -->
+      <div id="panel-doc" class="hidden space-y-3">
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 id="lbl-doc-form-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">🩺 డాక్టర్ విజిట్ (Doctor Visits)</h2>
+            <span id="val-doc-total" class="text-xs font-extrabold text-indigo-600">₹0</span>
+          </div>
+
+          <div>
+            <label for="select-doc-buffalo" class="block text-[11px] font-bold text-slate-500 mb-1">🐃 Which Animal? (ఏ గేదె / ఆవు కోసం?)</label>
+            <select id="select-doc-buffalo" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5" id="doc-quick-pills">
+            <button type="button" data-reason="Routine Checkup" class="doc-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-900 text-white border-slate-900">Checkup</button>
+            <button type="button" data-reason="Vaccination" class="doc-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-700 border-slate-200">Vaccination</button>
+            <button type="button" data-reason="AI / Breeding" class="doc-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-700 border-slate-200">AI / Breeding</button>
+            <button type="button" data-reason="Fever / Treatment" class="doc-pill tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-700 border-slate-200">Fever / Illness</button>
+          </div>
+
+          <input id="input-doc-name" type="text" maxlength="30" placeholder="డాక్టర్ పేరు (e.g. Dr. Raju) / Doctor name" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+
+          <div class="flex items-center gap-2">
+            <div class="flex-1 relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400">₹</span>
+              <input id="input-doc-cost" type="number" min="0" placeholder="0" class="w-full pl-7 pr-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-extrabold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+            <button type="button" data-docadd="200" class="doc-cost-btn tap-btn px-2.5 py-2.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-700">+200</button>
+            <button type="button" data-docadd="500" class="doc-cost-btn tap-btn px-2.5 py-2.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-700">+500</button>
+            <button type="button" data-docadd="1000" class="doc-cost-btn tap-btn px-2.5 py-2.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-700">+1000</button>
+          </div>
+
+          <button id="btn-save-doc" type="button" class="tap-btn w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-md shadow-indigo-600/20">
+            🩺 <span id="lbl-save-doc">డాక్టర్ విజిట్ సేవ్ చేయి (Save Visit)</span>
+          </button>
+        </div>
+
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs">
+          <h3 id="lbl-doc-list-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">డాక్టర్ విజిట్ల జాబితా (Doctor History)</h3>
+          <div id="doc-log-list" class="space-y-2"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 4: SUMMARY & HISTORY -->
+    <section id="view-history" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div class="lg:col-span-5 space-y-3">
+      <!-- Net Balance Summary Card (Admin Only in View Totals) -->
+      <div class="bg-slate-900 text-white rounded-2xl p-3.5 shadow-sm flex items-center justify-between">
+        <div>
+          <div id="lbl-mini-net" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Net Balance (మిగులు)</div>
+          <div id="val-totals-net" class="text-2xl font-extrabold text-emerald-400 mt-0.5 tabular-nums">₹0</div>
+        </div>
+        <div class="text-right text-[11px] space-y-0.5">
+          <div class="text-emerald-300 font-bold">Income: <span id="val-totals-inc" class="tabular-nums">₹0</span></div>
+          <div class="text-rose-300 font-bold">Spent: <span id="val-totals-exp" class="tabular-nums">₹0</span></div>
+        </div>
+      </div>
+
+      <!-- Period Filter + Export Actions -->
+      <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs space-y-2.5">
+        <div class="flex gap-1 overflow-x-auto bg-slate-100 p-1 rounded-xl">
+          <button type="button" data-filter="today" class="filter-btn tap-btn flex flex-none items-center justify-center text-center min-w-[5rem] px-3 py-1.5 rounded-lg font-bold text-[15px] bg-white text-slate-900 shadow-xs whitespace-nowrap">Today</button>
+          <button type="button" data-filter="week" class="filter-btn tap-btn flex flex-none items-center justify-center text-center min-w-[5rem] px-3 py-1.5 rounded-lg font-bold text-[15px] text-slate-600 whitespace-nowrap">7 Days</button>
+          <button type="button" data-filter="month" class="filter-btn tap-btn flex flex-none items-center justify-center text-center min-w-[5rem] px-3 py-1.5 rounded-lg font-bold text-[15px] text-slate-600 whitespace-nowrap">Monthly</button>
+          <button type="button" data-filter="year" class="filter-btn tap-btn flex flex-none items-center justify-center text-center min-w-[5rem] px-3 py-1.5 rounded-lg font-bold text-[15px] text-slate-600 whitespace-nowrap">Yearly</button>
+          <button type="button" data-filter="all" class="filter-btn tap-btn flex flex-none items-center justify-center text-center min-w-[5rem] px-3 py-1.5 rounded-lg font-bold text-[15px] text-slate-600 whitespace-nowrap">All</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-whatsapp" type="button" class="tap-btn py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5">
+            <span>📲</span>
+            <span id="lbl-wa">WhatsApp రిపోర్ట్</span>
+          </button>
+          <button id="btn-csv" type="button" class="tap-btn py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5">
+            <span>📥</span>
+            <span id="lbl-csv">Excel / CSV</span>
+          </button>
+        </div>
+
+        <!-- Two-Way Sync: Upload File OR Pull Directly from Mapped Google Sheet -->
+        <div class="grid grid-cols-2 gap-2">
+          <input id="input-import-file" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+          <button id="btn-import-sheet" type="button" class="tap-btn py-2.5 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 font-bold text-[11px] flex items-center justify-center gap-1">
+            <span>📤</span>
+            <span id="lbl-import">Upload .xlsx / .csv</span>
+          </button>
+          <button id="btn-pull-sheet" type="button" class="tap-btn py-2.5 px-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 font-bold text-[11px] flex items-center justify-center gap-1">
+            <span>⬇️</span>
+            <span id="lbl-pull">Sync From Sheet</span>
+          </button>
+        </div>
+
+        <!-- Sync Status Strip -->
+        <div id="sync-banner" class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+          <span id="sync-banner-text" class="font-semibold text-slate-700">☁️ Google Sheet: Not Connected</span>
+          <div class="flex items-center gap-1.5">
+            <button id="btn-sync-pending" type="button" class="hidden tap-btn px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold text-[11px]">Sync Now</button>
+            <button id="btn-open-sync-modal" type="button" class="tap-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">🔒 Setup</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Milk Rate & Collection Summary -->
+      <div class="bg-white rounded-2xl p-3.5 border border-emerald-200/80 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div id="lbl-rate-title" class="text-xs font-extrabold text-slate-800">🥛 Milk Rate &amp; Collection</div>
+            <div id="lbl-rate-sub" class="text-[10px] font-semibold text-slate-500">Rate × Sold Liters = Amount to Collect</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-500">₹/L</span>
+            <input id="input-admin-milk-rate" type="number" step="0.5" min="1" max="500" class="w-16 px-2 py-1.5 rounded-lg border border-slate-300 text-xs font-extrabold text-right text-emerald-700" />
+            <button id="btn-save-milk-rate" type="button" class="tap-btn px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold">Set</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
+          <div class="p-2 rounded-xl bg-blue-50">
+            <div id="lbl-admin-prod" class="text-[10px] font-bold text-blue-600">Pure Produced</div>
+            <div id="val-admin-milk-prod" class="text-sm font-extrabold text-slate-900 tabular-nums">0 L</div>
+          </div>
+          <div class="p-2 rounded-xl bg-cyan-50">
+            <div id="lbl-admin-adj" class="text-[10px] font-bold text-cyan-700">💧 Adjusted</div>
+            <div id="val-admin-milk-water" class="text-sm font-extrabold text-cyan-800 tabular-nums">+0 L</div>
+          </div>
+          <div class="p-2 rounded-xl bg-emerald-50">
+            <div id="lbl-admin-sold" class="text-[10px] font-bold text-emerald-600">Sold</div>
+            <div id="val-admin-milk-sold" class="text-sm font-extrabold text-slate-900 tabular-nums">0 L</div>
+          </div>
+          <div class="p-2 rounded-xl bg-amber-50">
+            <div id="lbl-admin-collect" class="text-[10px] font-bold text-amber-700">To Collect</div>
+            <div id="val-admin-milk-collect" class="text-sm font-extrabold text-emerald-700 tabular-nums">₹0</div>
+          </div>
+        </div>
+        <div id="val-admin-milk-mismatch" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-slate-50 text-slate-600"></div>
+      </div>
+
+      <!-- Herd Family & Heir Tree Card -->
+      <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h3 id="lbl-tree-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">🌳 వంశవృక్షం / Family & Heir Tree</h3>
+          <span id="val-tree-families" class="text-[11px] font-bold text-emerald-700"></span>
+        </div>
+        <div id="buffalo-heir-tree" class="space-y-2"></div>
+      </div>
+
+      <!-- Insemination & Breeding Tracker Card -->
+      <div id="breeding-section" class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 id="lbl-ai-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">🧬 గర్భధారణ / AI రికార్డు (Insemination)</h3>
+        </div>
+
+        <select id="select-ai-animal" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 mb-1">AI Date (తేదీ)</label>
+            <input id="input-ai-date" type="date" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 mb-1">Status (స్థితి)</label>
+            <select id="select-ai-status" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:outline-none">
+              <option value="Waiting Check">⏳ Waiting Check</option>
+              <option value="Pregnant (PD+)">🤰 Pregnant (PD+)</option>
+              <option value="Repeat / Failed">❌ Repeat / Failed</option>
+              <option value="Calved">🐣 Calved</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <input id="input-ai-bull" type="text" maxlength="30" placeholder="Bull / Semen ID (e.g. Murrah #42)" class="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input id="input-ai-note" type="text" maxlength="40" placeholder="Note / Vet name (optional)" class="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <button id="btn-save-ai" type="button" class="tap-btn w-full py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-sm shadow-md shadow-purple-600/20">
+          🧬 <span id="lbl-save-ai">AI రికార్డు సేవ్ చేయి (Save Insemination)</span>
+        </button>
+
+        <div id="ai-upcoming-box" class="space-y-1.5 pt-1"></div>
+        <div id="ai-log-list" class="space-y-2 pt-1"></div>
+      </div>
+
+      <!-- Per-Buffalo Status (Monthly / Yearly / Filtered) -->
+      <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 id="lbl-buf-status-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-600">🐃 Buffalo-Wise Status</h3>
+            <p id="lbl-buf-status-sub" class="text-[10px] font-semibold text-slate-400">Milk produced vs. Medicines, Vet &amp; Feed share</p>
+          </div>
+          <span id="val-admin-status-period" class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-extrabold uppercase">Today</span>
+        </div>
+        <div id="admin-buffalo-status-list" class="space-y-2"></div>
+      </div>
+
+      <!-- Segregated Category Breakdown (Spent & Income) -->
+      <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <h2 id="lbl-chart-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">విభాగాల వారీగా (Breakdown)</h2>
+          <div class="inline-flex bg-slate-100 p-0.5 rounded-xl">
+            <button id="bd-type-exp" type="button" class="tap-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-rose-600 shadow-xs">🔴 Spent</button>
+            <button id="bd-type-inc" type="button" class="tap-btn px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-600">🟢 Income</button>
+          </div>
+        </div>
+        <div class="relative h-48">
+          <canvas id="expense-chart"></canvas>
+        </div>
+        <div id="chart-empty" class="hidden text-center py-6 text-xs font-semibold text-slate-400">
+          ఈ విభాగంలో నమోదులు లేవు
+        </div>
+        <div id="category-breakdown-list" class="space-y-1.5 pt-1"></div>
+      </div>
+
+      </div>
+      <!-- Entries List -->
+      <div class="lg:col-span-7 bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs">
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 id="lbl-list-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-500">నమోదు చేసినవి (Entries)</h2>
+          <button id="btn-clear-all" type="button" class="tap-btn px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-extrabold shadow-xs inline-flex items-center gap-1">
+            🔒 <span id="lbl-reset">అన్నీ చెరిపివేయి</span>
+          </button>
+        </div>
+        <div id="entries-list" class="space-y-2">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Modern 4-Tab Bottom Navigation -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/80">
+    <div class="max-w-md mx-auto grid grid-cols-4 px-2 py-1.5 gap-1">
+      <button id="nav-buffalo" type="button" class="py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-emerald-700 bg-emerald-50 font-bold">
+        <span class="text-xl leading-none">🐃</span>
+        <span id="lbl-nav-buf" class="text-[11px]">గేదెలు</span>
+      </button>
+      <button id="nav-add" type="button" class="py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-slate-500 font-semibold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        <span id="lbl-nav-add" class="text-[11px]">కొత్తది రాయి</span>
+      </button>
+      <button id="nav-health" type="button" class="py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-slate-500 font-semibold">
+        <span class="text-xl leading-none">🩺</span>
+        <span id="lbl-nav-health" class="text-[11px]">మందులు/డాక్టర్</span>
+      </button>
+      <button id="nav-history" type="button" class="py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-slate-500 font-semibold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span id="lbl-nav-hist" class="text-[11px]">లెక్కలు</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden bg-slate-900 text-white px-4 py-2 rounded-full shadow-xl font-bold text-xs flex items-center gap-2">
+    <span id="toast-icon">✅</span>
+    <span id="toast-msg">సేవ్ అయింది!</span>
+  </div>
+
+  <!-- Owner 4-Digit PIN Modal -->
+  <div id="pin-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div id="pin-card" class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl space-y-4 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl">🔐</div>
+      <div>
+        <h3 id="pin-title" class="text-base font-extrabold text-slate-900">Owner PIN</h3>
+        <p id="pin-subtitle" class="text-xs text-slate-500 mt-0.5">Enter 4-digit PIN</p>
+      </div>
+      <div id="pin-dots" class="flex justify-center gap-3 py-1">
+        <span class="w-3.5 h-3.5 rounded-full bg-slate-200 transition-colors"></span>
+        <span class="w-3.5 h-3.5 rounded-full bg-slate-200 transition-colors"></span>
+        <span class="w-3.5 h-3.5 rounded-full bg-slate-200 transition-colors"></span>
+        <span class="w-3.5 h-3.5 rounded-full bg-slate-200 transition-colors"></span>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" data-pinkey="1" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">1</button>
+        <button type="button" data-pinkey="2" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">2</button>
+        <button type="button" data-pinkey="3" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">3</button>
+        <button type="button" data-pinkey="4" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">4</button>
+        <button type="button" data-pinkey="5" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">5</button>
+        <button type="button" data-pinkey="6" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">6</button>
+        <button type="button" data-pinkey="7" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">7</button>
+        <button type="button" data-pinkey="8" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">8</button>
+        <button type="button" data-pinkey="9" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">9</button>
+        <button id="pin-cancel" type="button" class="tap-btn py-3.5 rounded-xl bg-slate-50 text-xs font-bold text-slate-500">Cancel</button>
+        <button type="button" data-pinkey="0" class="pin-key tap-btn py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800">0</button>
+        <button id="pin-back" type="button" class="tap-btn py-3 rounded-xl bg-rose-50 text-sm font-bold text-rose-600">⌫</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Unclosable Morning/Evening Test & Doctor Reminder Modal -->
+  <div id="reminder-modal" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl shrink-0">🩺</div>
+        <div>
+          <span id="rem-shift-badge" class="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold uppercase">Morning / Evening Alert</span>
+          <h3 class="text-base font-extrabold text-slate-900 mt-0.5">Upcoming / Due Animal Checkup</h3>
+        </div>
+      </div>
+
+      <div id="rem-details-box" class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 space-y-1"></div>
+
+      <div class="space-y-2">
+        <button id="btn-rem-okay" type="button" class="tap-btn w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm">
+          ✅ 1. Okay / Doctor Checked (Done)
+        </button>
+
+        <button id="btn-rem-contacted-toggle" type="button" class="tap-btn w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-900 font-extrabold text-xs shadow-sm">
+          📞 2. Contacted Doctor — Not Yet Come
+        </button>
+      </div>
+
+      <div id="rem-doc-avail-box" class="hidden p-3 rounded-2xl bg-amber-50 border border-amber-200 space-y-2.5">
+        <label class="block text-[11px] font-extrabold text-amber-900">Doctor Availability / Expected Time:</label>
+        <div class="grid grid-cols-2 gap-1.5" id="rem-avail-pills">
+          <button type="button" data-avail="Today Evening" class="rem-avail-pill tap-btn py-2 px-2 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800">🌙 Today Evening</button>
+          <button type="button" data-avail="Tomorrow Morning" class="rem-avail-pill tap-btn py-2 px-2 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800">☀️ Tomorrow Morning</button>
+          <button type="button" data-avail="Tomorrow Evening" class="rem-avail-pill tap-btn py-2 px-2 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800">🌙 Tomorrow Evening</button>
+          <button type="button" data-avail="In 2 Days" class="rem-avail-pill tap-btn py-2 px-2 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800">📅 In 2 Days</button>
+        </div>
+        <input id="input-rem-avail-custom" type="text" placeholder="Or type doctor availability (e.g. Coming at 5 PM)" class="w-full px-3 py-2 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+        <button id="btn-rem-save-snooze" type="button" class="tap-btn w-full py-2.5 rounded-xl bg-slate-900 text-white font-extrabold text-xs">
+          Save Availability &amp; Remind Next Shift
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Buffalo Detailed Data Modal (Opened from Buffalo-Wise Status Hyperlink) -->
+  <div id="buffalo-detail-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 bg-emerald-700 text-white flex items-center justify-between">
+        <div>
+          <h3 id="bdetail-title" class="text-base font-extrabold">🐃 Buffalo Data</h3>
+          <p id="bdetail-subtitle" class="text-[11px] text-emerald-100 font-semibold"></p>
+        </div>
+        <button id="bdetail-close" type="button" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white font-extrabold text-sm flex items-center justify-center">✕</button>
+      </div>
+      <div id="bdetail-body" class="p-4 overflow-y-auto space-y-3 text-xs"></div>
+    </div>
+  </div>
+
+  <!-- Save Confirmation Pop-Up -->
+  <div id="save-confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl space-y-4 text-center">
+      <div class="text-3xl">✅</div>
+      <h3 id="save-modal-title" class="text-sm font-extrabold text-slate-700">Confirm Entry</h3>
+      <div id="save-modal-value" class="text-2xl font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-2xl py-3 px-3 tabular-nums">0</div>
+      <p id="save-modal-desc" class="text-xs font-semibold text-slate-500">Save this value?</p>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button id="save-modal-cancel" type="button" class="tap-btn py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700">Cancel</button>
+        <button id="save-modal-ok" type="button" class="tap-btn py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-xs text-white">Confirm &amp; Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-Page Confirmation Modal -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl space-y-4 text-center">
+      <div class="text-3xl">🗑️</div>
+      <h3 id="modal-title" class="text-base font-extrabold text-slate-900">తొలగించాలా?</h3>
+      <p id="modal-desc" class="text-xs text-slate-600">ఈ ఎంట్రీని శాశ్వతంగా తొలగించాలా?</p>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button id="modal-cancel" type="button" class="tap-btn py-2.5 rounded-xl bg-slate-100 font-bold text-xs text-slate-700">వద్దు / No</button>
+        <button id="modal-confirm" type="button" class="tap-btn py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs">అవును / Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Owner Settings & Google Sheets Auto-Sync Modal -->
+  <div id="sync-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-3.5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-extrabold text-slate-900">⚙️ Owner & Sheet Sync</h3>
+        <button id="sync-modal-close" type="button" class="w-8 h-8 rounded-full bg-slate-100 font-bold text-slate-600">✕</button>
+      </div>
+
+      <!-- Change Owner PIN -->
+      <div class="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/70 space-y-2">
+        <label class="block text-xs font-extrabold text-amber-900">🔐 Change 4-Digit Owner PIN</label>
+        <div class="flex gap-2">
+          <input id="input-new-pin" type="password" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" class="flex-1 px-3 py-2 rounded-xl border border-amber-200 bg-white text-xs font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          <button id="btn-save-pin" type="button" class="tap-btn px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold">Update PIN</button>
+        </div>
+      </div>
+
+      <!-- Mapped Google Sheet Link -->
+      <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold text-emerald-900 truncate">📊 Dairy Khata — Complete Tracker</div>
+            <div class="text-[10px] text-emerald-700 truncate">Entries • Milk_Logs • Herd_Tree • Insemination_AI</div>
+          </div>
+          <button id="btn-copy-sheet-url" type="button" class="tap-btn px-3 py-1.5 rounded-xl bg-emerald-700 text-white text-[11px] font-bold shrink-0">📋 Copy Link</button>
+        </div>
+        <div class="text-[10px] text-emerald-800 bg-white/80 px-2 py-1 rounded-lg border border-emerald-200/70 select-all break-all">https://docs.google.com/spreadsheets/d/1epmosQ4A23q-YlC5vrl3jBGZVsNo1gTN5LYwKPvktwg/edit</div>
+      </div>
+      <!-- Google Sheet Webhook URL -->
+      <div class="space-y-2">
+        <label class="block text-xs font-extrabold text-slate-700">☁️ Google Apps Script Web App URL</label>
+        <input id="input-webhook-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <div class="flex gap-2">
+          <button id="btn-save-webhook" type="button" class="tap-btn flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Save & Sync</button>
+          <button id="btn-clear-webhook" type="button" class="tap-btn px-3 py-2.5 rounded-xl bg-rose-50 text-rose-700 font-bold text-xs">Disconnect</button>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold text-slate-700">Apps Script (Extensions → Apps Script)</span>
+          <button id="btn-copy-script" type="button" class="tap-btn px-2.5 py-1 rounded-lg bg-slate-900 text-white text-[11px] font-bold">📋 Copy</button>
+        </div>
+        <pre id="apps-script-code" class="text-[10px] leading-snug text-slate-700 overflow-x-auto bg-white p-2 rounded-lg border border-slate-200">function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var d = JSON.parse(e.postData.contents);
+  var tabName = d.sheetTab || 'Entries';
+  var sheet = ss.getSheetByName(tabName) || ss.getActiveSheet();
+  var row = d.row || [d.date, d.time, d.author, d.type, d.category, d.amount, d.note];
+  sheet.appendRow(row);
+  return ContentService.createTextOutput(JSON.stringify({ok: true}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tabs = ['Entries', 'Milk_Logs', 'Herd_Tree', 'Insemination_AI'];
+  var out = {};
+  tabs.forEach(function(name) {
+    var sh = ss.getSheetByName(name);
+    if (!sh) return;
+    var vals = sh.getDataRange().getValues();
+    if (vals.length < 2) { out[name] = []; return; }
+    var hdr = vals[0];
+    out[name] = vals.slice(1).map(function(r) {
+      var obj = {};
+      hdr.forEach(function(h, i) { obj[h] = r[i]; });
+      return obj;
+    });
+  });
+  return ContentService.createTextOutput(JSON.stringify(out))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+      </div>
+    </div>
+  </div>
+  <script src="./js/config.js" defer></script>
+  <script src="./js/storage.js" defer></script>
+  <script src="./js/state.js" defer></script>
+  <script src="./js/herd.js" defer></script>
+  <script src="./js/admin.js" defer></script>
+  <script src="./js/events.js" defer></script>
+</body>
+</html>
