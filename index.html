@@ -36,6 +36,7 @@
         <button id="dnav-add" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">➕ Add Entry</button>
         <button id="dnav-health" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">🩺 Meds &amp; Vet</button>
         <button id="dnav-history" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">👑 Admin</button>
+        <button id="dnav-settings" type="button" aria-label="Settings" class="tap-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">⚙️ <span class="hidden lg:inline">Settings</span></button>
       </div>
         <button id="btn-owner-lock" type="button" aria-label="Admin access" class="tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 border transition-colors bg-slate-100 text-slate-600 border-slate-200 shrink-0">
           <span id="lock-icon">🔒</span>
@@ -446,7 +447,7 @@
           <span id="sync-banner-text" class="font-semibold text-slate-700">☁️ Google Sheet: Not Connected</span>
           <div class="flex items-center gap-1.5">
             <button id="btn-sync-pending" type="button" class="hidden tap-btn px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold text-[11px]">Sync Now</button>
-            <button id="btn-open-sync-modal" type="button" class="tap-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">🔒 Setup</button>
+            <button id="btn-open-sync-modal" type="button" class="tap-btn px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-[11px]">⚙️ Settings</button>
           </div>
         </div>
       </div>
@@ -732,8 +733,9 @@
       <!-- Change Owner PIN -->
       <div class="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/70 space-y-2">
         <label class="block text-xs font-extrabold text-amber-900">🔐 Change 4-Digit Owner PIN</label>
+        <input id="input-current-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Current 4-digit PIN" autocomplete="off" class="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-xs font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-500" />
         <div class="flex gap-2">
-          <input id="input-new-pin" type="password" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" class="flex-1 px-3 py-2 rounded-xl border border-amber-200 bg-white text-xs font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          <input id="input-new-pin" type="password" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" autocomplete="off" class="flex-1 px-3 py-2 rounded-xl border border-amber-200 bg-white text-xs font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-amber-500" />
           <button id="btn-save-pin" type="button" class="tap-btn px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold">Update PIN</button>
         </div>
       </div>
@@ -752,7 +754,8 @@
       <!-- Google Sheet Webhook URL -->
       <div class="space-y-2">
         <label class="block text-xs font-extrabold text-slate-700">☁️ Google Apps Script Web App URL</label>
-        <input id="input-webhook-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <input id="input-webhook-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed" />
+        <p class="text-[10px] text-slate-500">Connected URL is locked. Use Disconnect to replace it.</p>
         <div class="flex gap-2">
           <button id="btn-save-webhook" type="button" class="tap-btn flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Save & Sync</button>
           <button id="btn-clear-webhook" type="button" class="tap-btn px-3 py-2.5 rounded-xl bg-rose-50 text-rose-700 font-bold text-xs">Disconnect</button>
@@ -764,35 +767,234 @@
           <span class="text-[11px] font-bold text-slate-700">Apps Script (Extensions → Apps Script)</span>
           <button id="btn-copy-script" type="button" class="tap-btn px-2.5 py-1 rounded-lg bg-slate-900 text-white text-[11px] font-bold">📋 Copy</button>
         </div>
-        <pre id="apps-script-code" class="text-[10px] leading-snug text-slate-700 overflow-x-auto bg-white p-2 rounded-lg border border-slate-200">function doPost(e) {
+        <pre id="apps-script-code" class="text-[10px] leading-snug text-slate-700 overflow-x-auto bg-white p-2 rounded-lg border border-slate-200">var SHEET_HEADERS = {
+          Entries: ['Date', 'Time', 'Author', 'Type', 'Category', 'Amount (INR)', 'Note', 'ID'],
+          Milk_Logs: ['Date', 'Time', 'Author', 'Shift', 'Animal', 'Liters', 'Fat %', 'Note', 'ID'],
+          Herd_Tree: ['Animal ID/Name', 'Species', 'Breed', 'Mother / Parent', 'Price (INR)', 'Added Date', 'Author', 'Note', 'ID'],
+          Insemination_AI: ['AI Date', 'Animal', 'Species', 'Bull / Semen ID', 'Status', 'Author', 'Note', 'ID']
+};
+        var PIN_HASH_PROPERTY = 'OWNER_PIN_HASH';
+        var PIN_SALT_PROPERTY = 'OWNER_PIN_SALT';
+        var INITIAL_PIN_PROPERTY = 'INITIAL_OWNER_PIN';
+
+        function hashPin_(pin, salt) {
+          var bytes = Utilities.computeDigest(
+            Utilities.DigestAlgorithm.SHA_256,
+            salt + ':' + pin,
+            Utilities.Charset.UTF_8
+          );
+          return bytes.map(function(value) {
+            return ('0' + (value & 255).toString(16)).slice(-2);
+          }).join('');
+        }
+
+        function constantTimeEquals_(left, right) {
+          if (left.length !== right.length) return false;
+          var difference = 0;
+          for (var i = 0; i < left.length; i++) {
+            difference |= left.charCodeAt(i) ^ right.charCodeAt(i);
+          }
+          return difference === 0;
+        }
+
+        function initializeOwnerPin() {
+          var lock = LockService.getScriptLock();
+          lock.waitLock(10000);
+          try {
+            var properties = PropertiesService.getScriptProperties();
+            var initialPin = properties.getProperty(INITIAL_PIN_PROPERTY);
+            if (!initialPin || !/^\d{4}$/.test(initialPin)) {
+              throw new Error('Set INITIAL_OWNER_PIN to a 4-digit PIN in Script Properties first.');
+            }
+            var salt = Utilities.getUuid() + Utilities.getUuid();
+            properties.setProperties({
+              OWNER_PIN_SALT: salt,
+              OWNER_PIN_HASH: hashPin_(initialPin, salt)
+            });
+            properties.deleteProperty(INITIAL_PIN_PROPERTY);
+          } finally {
+            lock.releaseLock();
+          }
+        }
+
+        function verifyOwnerPin_(pin) {
+          var cache = CacheService.getScriptCache();
+          if (cache.get('owner-pin-lock')) return { authenticated: false, error: 'locked' };
+          var properties = PropertiesService.getScriptProperties();
+          var salt = properties.getProperty(PIN_SALT_PROPERTY);
+          var expectedHash = properties.getProperty(PIN_HASH_PROPERTY);
+          if (!salt || !expectedHash) return { authenticated: false, error: 'not_initialized' };
+          if (typeof pin === 'string' && /^\d{4}$/.test(pin) &&
+              constantTimeEquals_(hashPin_(pin, salt), expectedHash)) {
+            cache.remove('owner-pin-failures');
+            return { authenticated: true };
+          }
+          var failures = Number(cache.get('owner-pin-failures') || 0) + 1;
+          cache.put('owner-pin-failures', String(failures), 300);
+          if (failures >= 5) {
+            cache.put('owner-pin-lock', '1', 300);
+            cache.remove('owner-pin-failures');
+            return { authenticated: false, error: 'locked' };
+          }
+          return { authenticated: false, error: 'invalid_pin' };
+        }
+
+        function handlePinAction_(data) {
+          var requestId = String(data.requestId || '');
+          if (!/^[a-f0-9]{32}$/i.test(requestId)) throw new Error('Invalid PIN request ID.');
+          var lock = LockService.getScriptLock();
+          lock.waitLock(10000);
+          try {
+            var result;
+            if (data.action === 'verifyPin') {
+              result = verifyOwnerPin_(data.pin);
+            } else if (data.action === 'changePin') {
+              if (typeof data.newPin !== 'string' || !/^\d{4}$/.test(data.newPin)) {
+                result = { updated: false, error: 'invalid_new_pin' };
+              } else {
+                var verification = verifyOwnerPin_(data.currentPin);
+                result = verification.authenticated
+                  ? { updated: true }
+                  : { updated: false, error: verification.error };
+                if (result.updated) {
+                  var salt = Utilities.getUuid() + Utilities.getUuid();
+                  PropertiesService.getScriptProperties().setProperties({
+                    OWNER_PIN_SALT: salt,
+                    OWNER_PIN_HASH: hashPin_(data.newPin, salt)
+                  });
+                }
+              }
+            } else {
+              throw new Error('Unsupported PIN action.');
+            }
+            CacheService.getScriptCache().put('pin-request-' + requestId, JSON.stringify(result), 60);
+            return jsonResponse_({ ok: true });
+          } finally {
+            lock.releaseLock();
+          }
+        }
+
+        function getPinActionStatus_(requestId) {
+          if (!/^[a-f0-9]{32}$/i.test(requestId || '')) throw new Error('Invalid PIN request ID.');
+          var cache = CacheService.getScriptCache();
+          var result = cache.get('pin-request-' + requestId);
+          if (!result) return jsonResponse_({ pending: true });
+          cache.remove('pin-request-' + requestId);
+          return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON);
+        }
+
+function getSheet_(name) {
+  var headers = SHEET_HEADERS[name];
+  if (!headers) throw new Error('Unsupported sheet: ' + name);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var d = JSON.parse(e.postData.contents);
-  var tabName = d.sheetTab || 'Entries';
-  var sheet = ss.getSheetByName(tabName) || ss.getActiveSheet();
-  var row = d.row || [d.date, d.time, d.author, d.type, d.category, d.amount, d.note];
-  sheet.appendRow(row);
-  return ContentService.createTextOutput(JSON.stringify({ok: true}))
+  var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  } else {
+    var legacyHeaders = headers.slice(0, -1);
+    var actual = sheet.getRange(1, 1, 1, legacyHeaders.length).getValues()[0];
+    if (legacyHeaders.some(function(header, i) { return actual[i] && actual[i] !== header; })) {
+      if (actual[0] === legacyHeaders[0]) {
+        throw new Error('Header mismatch in ' + name + '. Keep the first row as the expected column headers.');
+      }
+      sheet.insertRowBefore(1);
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      actual = legacyHeaders;
+    }
+    legacyHeaders.forEach(function(header, i) {
+      if (!actual[i]) sheet.getRange(1, i + 1).setValue(header);
+    });
+    var idColumn = headers.length;
+    var idHeader = sheet.getRange(1, idColumn).getValue();
+    if (idHeader && idHeader !== 'ID') throw new Error('Unexpected final column in ' + name + '.');
+    if (!idHeader) sheet.getRange(1, idColumn).setValue('ID');
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      var idRange = sheet.getRange(2, idColumn, lastRow - 1, 1);
+      var ids = idRange.getValues();
+      var changed = false;
+      ids.forEach(function(row) {
+        if (!row[0]) {
+          row[0] = Utilities.getUuid();
+          changed = true;
+        }
+      });
+      if (changed) idRange.setValues(ids);
+    }
+  }
+  return sheet;
+}
+
+function jsonResponse_(value) {
+  return ContentService.createTextOutput(JSON.stringify(value))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function doGet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var tabs = ['Entries', 'Milk_Logs', 'Herd_Tree', 'Insemination_AI'];
-  var out = {};
-  tabs.forEach(function(name) {
-    var sh = ss.getSheetByName(name);
-    if (!sh) return;
-    var vals = sh.getDataRange().getValues();
-    if (vals.length < 2) { out[name] = []; return; }
-    var hdr = vals[0];
-    out[name] = vals.slice(1).map(function(r) {
-      var obj = {};
-      hdr.forEach(function(h, i) { obj[h] = r[i]; });
-      return obj;
+function doPost(e) {
+  if (!e || !e.postData || !e.postData.contents) throw new Error('Missing request body.');
+  var d = JSON.parse(e.postData.contents);
+  if (d.action === 'verifyPin' || d.action === 'changePin') return handlePinAction_(d);
+  var tabName = d.sheetTab || 'Entries';
+  var headers = SHEET_HEADERS[tabName];
+  var row = Array.isArray(d.row)
+    ? d.row
+    : [d.date, d.time, d.author, d.type, d.category, d.amount, d.note, d.id];
+  if (!headers || row.length !== headers.length || !row[headers.length - 1]) {
+    throw new Error('Invalid row or missing ID for sheet: ' + tabName);
+  }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getSheet_(tabName);
+    var lastRow = sheet.getLastRow();
+    var idColumn = headers.length;
+    var existingRow = -1;
+    var ids = [];
+    if (lastRow > 1) {
+      ids = sheet.getRange(2, idColumn, lastRow - 1, 1).getValues();
+      existingRow = ids.findIndex(function(value) { return String(value[0]) === String(row[idColumn - 1]); });
+      if (existingRow === -1 && tabName === 'Herd_Tree') {
+        var existingNames = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+        existingRow = existingNames.findIndex(function(value) {
+          return String(value[0]).trim().toLowerCase() === String(row[0]).trim().toLowerCase();
+        });
+        if (existingRow !== -1) row[idColumn - 1] = ids[existingRow][0];
+      }
+      if (existingRow !== -1) {
+        sheet.getRange(existingRow + 2, 1, 1, headers.length).setValues([row]);
+        return jsonResponse_({ ok: true, updated: true });
+      }
+    }
+    sheet.appendRow(row);
+    return jsonResponse_({ ok: true, updated: false });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doGet(event) {
+  if (event && event.parameter && event.parameter.action === 'pinStatus') {
+    return getPinActionStatus_(String(event.parameter.requestId || ''));
+  }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var out = {};
+    Object.keys(SHEET_HEADERS).forEach(function(name) {
+      var sheet = getSheet_(name);
+      var lastRow = sheet.getLastRow();
+      out[name] = lastRow < 2 ? [] : sheet.getRange(2, 1, lastRow - 1, SHEET_HEADERS[name].length).getValues().map(function(row) {
+        var item = {};
+        SHEET_HEADERS[name].forEach(function(header, i) { item[header] = row[i]; });
+        return item;
+      });
     });
-  });
-  return ContentService.createTextOutput(JSON.stringify(out))
-    .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse_(out);
+  } catch (err) {
+    return jsonResponse_({ error: err && err.message ? err.message : String(err) });
+  } finally {
+    lock.releaseLock();
+  }
 }</pre>
       </div>
     </div>

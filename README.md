@@ -9,7 +9,7 @@ A mobile-first, bilingual (**Telugu / English**) web app for tracking daily dair
 ### 1. Select Your Name & Language
 * Tap your name under **Author** (`Ramu`, `Ravi`, `Suresh`, etc.) before logging any entry.
 * Tap **`EN` / `తె`** in the top-right header anytime to switch the entire app between **Telugu (తెలుగు)** and **English**.
-* Selecting **🔒 Owner** requires the **4-digit Owner PIN** (default: `1234`, changeable in **⚙️ Settings**). Switching back to a worker automatically re-locks Owner mode.
+* Selecting **🔒 Owner** requires the 4-digit Owner PIN configured in the bound Apps Script. It is not stored in the app or repository. Switching back to a worker automatically re-locks Owner mode.
 
 ### 2. 🐃 Buffaloes Tab (Herd & Milk Production)
 * **Filter & Browse:** See one herd card at a time; use the pills (**Buffaloes Only**, **Cows**, **With Heirs**), **◀ / ▶** arrows, or swipe left/right to move through the herd.
@@ -57,7 +57,16 @@ A mobile-first, bilingual (**Telugu / English**) web app for tracking daily dair
 ### Deploy
 1. Push all files to your GitHub `master` branch (Private or Public).
 2. Connect the repository to **Cloudflare Pages** (Framework preset: `None`, Build output: `/`).
-3. *(Optional)* Open **⚙️ Sync & Settings** in the app (Owner PIN) and paste your **Google Apps Script Web App URL** to sync entries and milk logs to Google Sheets.
+3. *(Optional)* From the linked Google Sheet, open **Extensions → Apps Script**, replace the editor contents with the script shown in **⚙️ Sync & Settings**, and save it.
+4. In Apps Script **Project Settings → Script Properties**, add `INITIAL_OWNER_PIN` with your chosen 4-digit PIN. In the editor, run `initializeOwnerPin()` once. Confirm `INITIAL_OWNER_PIN` is removed and `OWNER_PIN_HASH` plus `OWNER_PIN_SALT` remain. Never put the PIN in the repository or send it in chat.
+5. Choose **Deploy → New deployment → Web app**, set **Execute as** to yourself, grant access to the app's users, authorize spreadsheet access, and copy the deployment URL ending in `/exec`.
+6. In the app, open **⚙️ Sync & Settings** and save that URL. The app checks `doGet()` and the required sheet tabs before connecting. Change the PIN there by entering the current PIN and a new one; the server stores only a salted hash.
+
+App-to-sheet and sheet-to-app sync uses a stable `ID` column on each tab. The script adds IDs to existing rows and updates a row with the same ID instead of appending a duplicate. Use **Sync From Sheet** to merge changes from Sheets and upload app-only records; matching legacy rows are paired by their data during the first sync. Sync is non-destructive: deleting a row or record on one side does not delete it on the other.
+
+The Apps Script URL is stored in that browser's local storage; set it separately on each device/browser. The PIN is verified by Apps Script and is not retained in browser storage. Do not use the development URL ending in `/dev` for the app connection.
+
+**Deployment security:** the app's client-side admin screen is not a server-side authorization boundary. With a public Web App deployment, anyone who obtains its URL can call its sheet read/write endpoints. Restrict deployment access or add server-side authorization before using it with data that must remain private.
 
 
 ---

@@ -13,6 +13,68 @@
         if (state.soundOn) playTone(520, 0.06);
       });
 
+      async function callAdminPinAction(payload) {
+        if (!state.webhookUrl) throw new Error('Configure the Apps Script URL in Setup first.');
+        if (!window.crypto || !window.crypto.getRandomValues) throw new Error('Secure browser support is required for PIN verification.');
+
+        const requestId = Array.from(window.crypto.getRandomValues(new Uint8Array(16)))
+          .map(value => value.toString(16).padStart(2, '0')).join('');
+        await fetch(state.webhookUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ ...payload, requestId })
+        });
+
+        const statusUrl = new URL(state.webhookUrl);
+        statusUrl.searchParams.set('action', 'pinStatus');
+        statusUrl.searchParams.set('requestId', requestId);
+        for (let attempt = 0; attempt < 15; attempt++) {
+          const response = await fetch(statusUrl.href);
+          if (!response.ok) throw new Error('PIN verification endpoint returned HTTP ' + response.status);
+          const result = await response.json();
+          if (!result.pending) return result;
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        throw new Error('PIN verification timed out. Check the Apps Script deployment.');
+      }
+
+      async function verifyOwnerPin(pin) {
+        state.pinVerifying = true;
+        try {
+          const result = await callAdminPinAction({ action: 'verifyPin', pin });
+          if (!result.authenticated) {
+            const message = {
+              locked: 'PIN temporarily locked. Try again later.',
+              not_initialized: 'Admin PIN is not configured in Apps Script.'
+            }[result.error] || 'Wrong PIN';
+            throw new Error(message);
+          }
+          state.ownerUnlocked = true;
+          document.getElementById('pin-modal').classList.add('hidden');
+          renderOwnerLockBadge();
+          renderAuthors();
+          renderEntryDateField();
+          renderBuffaloView();
+          playTone(880, 0.1);
+          if (state.pendingProtectedAction) {
+            const fn = state.pendingProtectedAction;
+            state.pendingProtectedAction = null;
+            fn();
+          }
+        } catch (err) {
+          playTone(220, 0.15);
+          const card = document.getElementById('pin-card');
+          card.classList.add('shake');
+          setTimeout(() => card.classList.remove('shake'), 300);
+          showToast(err.message || 'PIN verification failed', '⚠️');
+        } finally {
+          state.pinBuffer = '';
+          state.pinVerifying = false;
+          renderPinDots();
+        }
+      }
+
       const ownerLockButton = document.getElementById('btn-owner-lock');
       if (ownerLockButton) ownerLockButton.addEventListener('click', () => {
         if (state.ownerUnlocked) {
@@ -39,35 +101,12 @@
 
       // PIN Keypad Logic
       document.querySelectorAll('.pin-key').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (state.pinBuffer.length >= 4) return;
+        btn.addEventListener('click', async () => {
+          if (state.pinVerifying || state.pinBuffer.length >= 4) return;
           state.pinBuffer += btn.dataset.pinkey;
           playTone(540, 0.03);
           renderPinDots();
-          if (state.pinBuffer.length === 4) {
-            if (state.pinBuffer === state.ownerPin) {
-              state.ownerUnlocked = true;
-              document.getElementById('pin-modal').classList.add('hidden');
-              renderOwnerLockBadge();
-              renderAuthors();
-              renderEntryDateField();
-              renderBuffaloView();
-              playTone(880, 0.1);
-              if (state.pendingProtectedAction) {
-                const fn = state.pendingProtectedAction;
-                state.pendingProtectedAction = null;
-                fn();
-              }
-            } else {
-              playTone(220, 0.15);
-              const card = document.getElementById('pin-card');
-              card.classList.add('shake');
-              setTimeout(() => card.classList.remove('shake'), 300);
-              state.pinBuffer = '';
-              setTimeout(renderPinDots, 150);
-              showToast('Wrong PIN', '⚠️');
-            }
-          }
+          if (state.pinBuffer.length === 4) await verifyOwnerPin(state.pinBuffer);
         });
       });
 
@@ -398,12 +437,16 @@
           showToast('Enter buffalo name or tag #', '⚠️');
           return;
         }
+        if (state.buffaloes.some(buffalo => buffalo.name.trim().toLowerCase() === name.toLowerCase())) {
+          showToast('That animal name or tag already exists', '⚠️');
+          return;
+        }
         const species = document.getElementById('input-buf-species').value;
         const breed = document.getElementById('input-buf-breed').value;
         const price = parseInt(document.getElementById('input-buf-price').value, 10) || 0;
         const motherId = document.getElementById('select-buf-mother').value || '';
         const buf = {
-          id: 'b_' + Date.now(),
+          id: 'b_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
           name,
           species,
           breed,
@@ -418,7 +461,7 @@
         const motherName = motherId ? ((state.buffaloes.find(x => x.id === motherId) || {}).name || 'Founder') : 'Founder';
         postToSheet({
           sheetTab: 'Herd_Tree',
-          row: [buf.name, buf.species, buf.breed, motherName, buf.price, d.toLocaleDateString('en-IN'), state.currentAuthor || 'Worker', '']
+          row: [buf.name, buf.species, buf.breed, motherName, buf.price, d.toLocaleDateString('en-IN'), state.currentAuthor || 'Worker', '', buf.id]
         });
 
         document.getElementById('input-buf-name').value = '';
@@ -516,7 +559,7 @@
           const d = new Date(log.ts);
           postToSheet({
             sheetTab: 'Milk_Logs',
-            row: [d.toLocaleDateString('en-IN'), d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), log.author, log.shift, log.buffalo, log.liters, log.fat + '%', '']
+            row: [d.toLocaleDateString('en-IN'), d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), log.author, log.shift, log.buffalo, log.liters, log.fat + '%', '', log.id]
           });
           litersInp.value = '';
           delete state.milkDrafts[bufName];
@@ -566,7 +609,7 @@
         const bufObj = state.buffaloes.find(b => b.name === animal);
         const species = bufObj ? (bufObj.species || 'Buffalo') : 'Buffalo';
         const rec = {
-          id: 'ai_' + Date.now(),
+          id: 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
           animal,
           species,
           aiDate,
@@ -581,7 +624,7 @@
 
         postToSheet({
           sheetTab: 'Insemination_AI',
-          row: [aiDate, animal, species, bull, status, '', '', '', '', '', rec.author, note]
+          row: [aiDate, animal, species, bull, status, rec.author, note, rec.id]
         });
 
         document.getElementById('input-ai-bull').value = '';
@@ -916,68 +959,133 @@
         renderAll();
       });
 
-      // PIN-Protected Owner Settings & Google Sheets Sync Modal
+      // Owner PIN management and Google Sheets sync settings
       function openSyncModal() {
-        requireOwnerPin(() => {
-          document.getElementById('input-webhook-url').value = state.webhookUrl || '';
-          document.getElementById('input-new-pin').value = '';
-          document.getElementById('sync-modal').classList.remove('hidden');
-        });
+        const webhookInput = document.getElementById('input-webhook-url');
+        webhookInput.value = state.webhookUrl || '';
+        webhookInput.disabled = Boolean(state.webhookUrl);
+        document.getElementById('input-current-pin').value = '';
+        document.getElementById('input-new-pin').value = '';
+        document.getElementById('sync-modal').classList.remove('hidden');
       }
 
       const syncSetupButton = document.getElementById('btn-sync-setup');
       if (syncSetupButton) syncSetupButton.addEventListener('click', openSyncModal);
       document.getElementById('btn-open-sync-modal').addEventListener('click', openSyncModal);
+      document.getElementById('dnav-settings').addEventListener('click', openSyncModal);
       document.getElementById('sync-modal-close').addEventListener('click', () => {
         document.getElementById('sync-modal').classList.add('hidden');
+        document.getElementById('input-current-pin').value = '';
+        document.getElementById('input-new-pin').value = '';
       });
 
-      document.getElementById('btn-save-pin').addEventListener('click', () => {
+      async function fetchSheetTabs(url) {
+        let response;
+        try {
+          response = await fetch(url);
+        } catch (err) {
+          throw new Error('Could not reach Apps Script. Check the /exec URL, network, and deployment access. ' + (err.message || ''));
+        }
+        if (!response.ok) throw new Error('Apps Script returned HTTP ' + response.status);
+        let tabs;
+        try {
+          tabs = await response.json();
+        } catch (err) {
+          throw new Error('Apps Script did not return JSON. Redeploy it as a Web App and allow access to the app users.');
+        }
+        if (tabs && typeof tabs.error === 'string') {
+          throw new Error('Apps Script doGet failed: ' + tabs.error);
+        }
+        const requiredTabs = ['Entries', 'Milk_Logs', 'Herd_Tree', 'Insemination_AI'];
+        if (!tabs || requiredTabs.some(name => !Array.isArray(tabs[name]))) {
+          throw new Error('Apps Script JSON is missing required tabs. Check SHEET_HEADERS and redeploy the latest script.');
+        }
+        return tabs;
+      }
+
+      async function syncWithSheet(url) {
+        const tabsMap = await fetchSheetTabs(url);
+        const counts = applyParsedTabs(tabsMap);
+        const uploads = await syncLocalRecordsMissingFromSheet(tabsMap);
+        renderSyncStatus();
+        return { counts, uploads };
+      }
+
+      document.getElementById('btn-save-pin').addEventListener('click', async () => {
+        const currentPin = document.getElementById('input-current-pin').value.trim();
         const newPin = document.getElementById('input-new-pin').value.trim();
-        if (!/^\d{4}$/.test(newPin)) {
-          showToast('PIN must be 4 digits', '⚠️');
+        if (!/^\d{4}$/.test(currentPin) || !/^\d{4}$/.test(newPin)) {
+          showToast('Enter the current PIN and a new 4-digit PIN', '⚠️');
           return;
         }
-        state.ownerPin = newPin;
-        safeSet(PIN_KEY, newPin);
-        document.getElementById('input-new-pin').value = '';
-        showToast('Owner PIN updated!', '🔐');
+        try {
+          const result = await callAdminPinAction({ action: 'changePin', currentPin, newPin });
+          if (!result.updated) {
+            const message = {
+              locked: 'PIN temporarily locked. Try later.',
+              not_initialized: 'Admin PIN is not configured in Apps Script.',
+              invalid_new_pin: 'New PIN must be 4 digits.'
+            }[result.error] || 'Current PIN is incorrect';
+            showToast(message, '⚠️');
+            return;
+          }
+          document.getElementById('input-current-pin').value = '';
+          document.getElementById('input-new-pin').value = '';
+          showToast('Owner PIN updated securely!', '🔐');
+        } catch (err) {
+          showToast(err.message || 'PIN update failed', '⚠️');
+        }
       });
 
       document.getElementById('btn-save-webhook').addEventListener('click', async () => {
         const url = document.getElementById('input-webhook-url').value.trim();
-        if (!url.startsWith('https://script.google.com/')) {
-          showToast('Enter valid https://script.google.com/... URL', '⚠️');
+        let parsedUrl;
+        try {
+          parsedUrl = new URL(url);
+        } catch (err) {
+          showToast('Enter a valid Apps Script Web App URL', '⚠️');
+          return;
+        }
+        if (parsedUrl.origin !== 'https://script.google.com' || !/^\/(?:a\/[^/]+\/)?macros\/s\/[^/]+\/exec$/.test(parsedUrl.pathname)) {
+          showToast('Use the deployed Apps Script URL ending in /exec', '⚠️');
+          return;
+        }
+        let tabsMap;
+        try {
+          tabsMap = await fetchSheetTabs(parsedUrl.href);
+        } catch (err) {
+          showToast('Apps Script check failed: ' + (err.message || 'unknown error'), '⚠️');
           return;
         }
         state.webhookUrl = url;
         safeSet(WEBHOOK_KEY, url);
+        document.getElementById('input-webhook-url').disabled = true;
         document.getElementById('sync-modal').classList.add('hidden');
         renderSyncStatus();
-        showToast('Google Sheet connected!', '☁️');
-        for (const entry of state.entries) {
-          if (!entry.synced) await syncEntryToSheet(entry);
-        }
+        applyParsedTabs(tabsMap);
+        const uploads = await syncLocalRecordsMissingFromSheet(tabsMap);
+        showToast(`Sync complete: ${uploads.sent} uploaded, ${uploads.failed} failed`, uploads.failed ? '⚠️' : '☁️');
+        renderSyncStatus();
       });
 
       document.getElementById('btn-clear-webhook').addEventListener('click', () => {
         state.webhookUrl = '';
         safeSet(WEBHOOK_KEY, '');
         document.getElementById('input-webhook-url').value = '';
+        document.getElementById('input-webhook-url').disabled = false;
         document.getElementById('sync-modal').classList.add('hidden');
         renderSyncStatus();
         showToast('Disconnected from Google Sheet', '⚪');
       });
 
       document.getElementById('btn-sync-pending').addEventListener('click', async () => {
-        let count = 0;
-        for (const entry of state.entries) {
-          if (!entry.synced) {
-            const ok = await syncEntryToSheet(entry);
-            if (ok) count++;
-          }
+        try {
+          showToast('Syncing app and sheet...', '☁️');
+          const result = await syncWithSheet(state.webhookUrl);
+          showToast(`Sync complete: ${result.uploads.sent} uploaded, ${result.uploads.failed} failed`, result.uploads.failed ? '⚠️' : '☁️');
+        } catch (err) {
+          showToast('Sync failed: ' + (err.message || 'unknown error'), '⚠️');
         }
-        if (count > 0) showToast(`Synced ${count} entry(s)!`, '☁️');
       });
 
       document.getElementById('btn-copy-sheet-url').addEventListener('click', () => {
@@ -1038,13 +1146,26 @@
             // Import / Upload Sheet (.xlsx or .csv)
       function parseDateToTs(dateVal, timeVal) {
         if (!dateVal) return Date.now();
+        let date;
         if (typeof dateVal === 'number') {
-          const utcDays = Math.floor(dateVal - 25569);
-          return utcDays * 86400 * 1000;
+          date = new Date((dateVal - 25569) * 86400 * 1000);
+        } else {
+          const dateText = String(dateVal).trim();
+          const localDate = dateText.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          date = localDate
+            ? new Date(Number(localDate[3]), Number(localDate[2]) - 1, Number(localDate[1]))
+            : new Date(dateText);
         }
-        const str = String(dateVal).trim() + (timeVal ? ' ' + String(timeVal).trim() : '');
-        const parsed = Date.parse(str);
-        return isNaN(parsed) ? Date.now() : parsed;
+        if (isNaN(date.getTime())) return Date.now();
+        if (timeVal !== undefined && timeVal !== null && timeVal !== '') {
+          const time = String(timeVal).match(/(?:T|\b)(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?\s*(AM|PM)?/i);
+          if (time) {
+            let hours = Number(time[1]) % 12;
+            if (time[3] && time[3].toUpperCase() === 'PM') hours += 12;
+            date.setHours(hours, Number(time[2]), 0, 0);
+          }
+        }
+        return date.getTime();
       }
 
       function mapCategoryId(type, catStr) {
@@ -1067,11 +1188,161 @@
         return 'other_inc';
       }
 
-            // Shared helper to update app state from parsed tab rows (used by both File Upload & Live Google Sheet Pull)
+      function recordDateTimeKey(ts) {
+        const date = new Date(ts);
+        return [
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          date.getHours(),
+          date.getMinutes()
+        ].join(':');
+      }
+
+      function mergeImportedRecords(currentRecords, importedRecords, getContentKey) {
+        const merged = currentRecords.slice();
+        const indexById = new Map();
+        const usedIndexes = new Set();
+        merged.forEach((record, index) => {
+          if (record.id) indexById.set(String(record.id), index);
+        });
+
+        importedRecords.forEach(record => {
+          const recordId = record.id ? String(record.id) : '';
+          let index = recordId && indexById.has(recordId) ? indexById.get(recordId) : -1;
+          if (index < 0 && getContentKey) {
+            const contentKey = getContentKey(record);
+            index = merged.findIndex((existing, i) =>
+              !usedIndexes.has(i) && getContentKey(existing) === contentKey
+            );
+          }
+          if (index >= 0) {
+            merged[index] = { ...merged[index], ...record };
+            usedIndexes.add(index);
+            if (recordId) indexById.set(recordId, index);
+          } else {
+            index = merged.push(record) - 1;
+            usedIndexes.add(index);
+            if (recordId) indexById.set(recordId, index);
+          }
+        });
+        return merged;
+      }
+
+      function entryContentKey(entry) {
+        return JSON.stringify([
+          recordDateTimeKey(entry.ts),
+          entry.type,
+          entry.catId,
+          Number(entry.amount),
+          entry.author || 'Worker',
+          entry.note || ''
+        ]);
+      }
+
+      function milkContentKey(log) {
+        return JSON.stringify([
+          recordDateTimeKey(log.ts),
+          log.shift,
+          log.buffalo,
+          Number(log.liters),
+          String(log.fat || ''),
+          log.author || 'Worker'
+        ]);
+      }
+
+      function aiContentKey(record) {
+        return JSON.stringify([
+          record.aiDate,
+          record.animal,
+          record.species || 'Buffalo',
+          record.bull || '',
+          record.status || '',
+          record.author || 'Worker',
+          record.note || ''
+        ]);
+      }
+
+      function buffaloContentKey(buffalo) {
+        return String(buffalo.name || '').trim().toLowerCase();
+      }
+
+      async function syncLocalRecordsMissingFromSheet(tabsMap) {
+        const idSet = name => new Set((tabsMap[name] || []).map(row => String(row.ID || '')).filter(Boolean));
+        const remoteEntries = idSet('Entries');
+        const remoteMilk = idSet('Milk_Logs');
+        const remoteHerd = idSet('Herd_Tree');
+        const remoteAi = idSet('Insemination_AI');
+        let sent = 0;
+        let failed = 0;
+        const send = async promise => {
+          if (await promise) sent++;
+          else failed++;
+        };
+
+        for (const entry of state.entries) {
+          if (!remoteEntries.has(String(entry.id || ''))) await send(syncEntryToSheet(entry));
+        }
+        for (const log of state.milkLogs) {
+          if (remoteMilk.has(String(log.id || ''))) continue;
+          const date = new Date(log.ts);
+          await send(postToSheet({
+            sheetTab: 'Milk_Logs',
+            row: [
+              date.toLocaleDateString('en-IN'),
+              date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+              log.author || 'Worker',
+              log.shift === 'evening' ? 'evening' : 'morning',
+              log.buffalo,
+              log.liters,
+              String(log.fat || '7.0').replace('%', '') + '%',
+              '',
+              log.id
+            ]
+          }));
+        }
+        for (const buffalo of state.buffaloes) {
+          if (remoteHerd.has(String(buffalo.id || ''))) continue;
+          const mother = state.buffaloes.find(item => item.id === buffalo.motherId);
+          await send(postToSheet({
+            sheetTab: 'Herd_Tree',
+            row: [
+              buffalo.name,
+              buffalo.species || 'Buffalo',
+              buffalo.breed || '',
+              mother ? mother.name : 'Founder',
+              buffalo.price || 0,
+              new Date(buffalo.addedAt).toLocaleDateString('en-IN'),
+              state.currentAuthor || 'Worker',
+              '',
+              buffalo.id
+            ]
+          }));
+        }
+        for (const record of state.aiLogs) {
+          if (remoteAi.has(String(record.id || ''))) continue;
+          await send(postToSheet({
+            sheetTab: 'Insemination_AI',
+            row: [
+              record.aiDate,
+              record.animal,
+              record.species || 'Buffalo',
+              record.bull || '',
+              record.status || '',
+              record.author || 'Worker',
+              record.note || '',
+              record.id
+            ]
+          }));
+        }
+        return { sent, failed };
+      }
+
+      // Merge records by stable ID and use content matching for pre-ID sheet rows.
       function applyParsedTabs(tabsMap) {
         let counts = { entries: 0, milk: 0, herd: 0, ai: 0 };
 
-        if (Array.isArray(tabsMap.Entries) && tabsMap.Entries.length > 0) {
+        if (Array.isArray(tabsMap.Entries)) {
           const importedEntries = [];
           tabsMap.Entries.forEach((r, idx) => {
             const amt = parseFloat(r['Amount (INR)'] || r['Amount_INR'] || r['Amount'] || 0);
@@ -1079,7 +1350,7 @@
             const rawType = String(r['Type'] || 'Expense').toLowerCase();
             const type = rawType.includes('inc') ? 'income' : 'expense';
             importedEntries.push({
-              id: 'imp_e_' + Date.now() + '_' + idx,
+              id: String(r.ID || ('imp_e_' + Date.now() + '_' + idx)),
               type,
               catId: mapCategoryId(type, r['Category']),
               amount: amt,
@@ -1090,17 +1361,17 @@
             });
           });
           if (importedEntries.length > 0) {
-            state.entries = importedEntries;
+            state.entries = mergeImportedRecords(state.entries, importedEntries, entryContentKey);
             saveEntries(state.entries);
             counts.entries = importedEntries.length;
           }
         }
 
-        if (Array.isArray(tabsMap.Herd_Tree) && tabsMap.Herd_Tree.length > 0) {
+        if (Array.isArray(tabsMap.Herd_Tree)) {
           const rawAnimals = tabsMap.Herd_Tree.filter(r => String(r['Animal ID/Name'] || '').trim() !== '');
           if (rawAnimals.length > 0) {
             const built = rawAnimals.map((r, idx) => ({
-              id: 'imp_b_' + idx + '_' + Date.now(),
+              id: String(r.ID || ('imp_b_' + idx + '_' + Date.now())),
               name: String(r['Animal ID/Name']).trim(),
               species: String(r['Species'] || 'Buffalo').trim(),
               breed: String(r['Breed'] || 'Murrah').trim(),
@@ -1116,20 +1387,20 @@
               }
               delete a.motherNameRaw;
             });
-            state.buffaloes = built;
+            state.buffaloes = mergeImportedRecords(state.buffaloes, built, buffaloContentKey);
             safeSet(BUFFALO_KEY, JSON.stringify(state.buffaloes));
             counts.herd = built.length;
           }
         }
 
-        if (Array.isArray(tabsMap.Milk_Logs) && tabsMap.Milk_Logs.length > 0) {
+        if (Array.isArray(tabsMap.Milk_Logs)) {
           const importedMilk = [];
           tabsMap.Milk_Logs.forEach((r, idx) => {
             const liters = parseFloat(r['Liters'] || 0);
             if (!liters || liters <= 0) return;
             const shiftRaw = String(r['Shift'] || 'morning').toLowerCase();
             importedMilk.push({
-              id: 'imp_m_' + Date.now() + '_' + idx,
+              id: String(r.ID || ('imp_m_' + Date.now() + '_' + idx)),
               shift: shiftRaw.includes('eve') ? 'evening' : 'morning',
               buffalo: String(r['Animal'] || 'All Herd').trim() || 'All Herd',
               liters,
@@ -1139,13 +1410,13 @@
             });
           });
           if (importedMilk.length > 0) {
-            state.milkLogs = importedMilk;
+            state.milkLogs = mergeImportedRecords(state.milkLogs, importedMilk, milkContentKey);
             safeSet(MILK_KEY, JSON.stringify(state.milkLogs));
             counts.milk = importedMilk.length;
           }
         }
 
-        if (Array.isArray(tabsMap.Insemination_AI) && tabsMap.Insemination_AI.length > 0) {
+        if (Array.isArray(tabsMap.Insemination_AI)) {
           const importedAi = [];
           tabsMap.Insemination_AI.forEach((r, idx) => {
             const animal = String(r['Animal'] || '').trim();
@@ -1158,7 +1429,7 @@
               aiDateStr = aiDateStr.slice(0, 10);
             }
             importedAi.push({
-              id: 'imp_ai_' + Date.now() + '_' + idx,
+              id: String(r.ID || ('imp_ai_' + Date.now() + '_' + idx)),
               animal,
               species: String(r['Species'] || 'Buffalo').trim(),
               aiDate: aiDateStr,
@@ -1170,7 +1441,7 @@
             });
           });
           if (importedAi.length > 0) {
-            state.aiLogs = importedAi;
+            state.aiLogs = mergeImportedRecords(state.aiLogs, importedAi, aiContentKey);
             safeSet(AI_KEY, JSON.stringify(state.aiLogs));
             counts.ai = importedAi.length;
           }
@@ -1189,12 +1460,11 @@
         }
         try {
           showToast('Syncing from Google Sheet...', '⬇️');
-          const res = await fetch(state.webhookUrl);
-          const tabsMap = await res.json();
-          const c = applyParsedTabs(tabsMap);
-          showToast(`Synced: ${c.entries} entries, ${c.herd} animals, ${c.milk} milk`, '☁️');
+          const result = await syncWithSheet(state.webhookUrl);
+          const c = result.counts;
+          showToast(`Synced ${c.entries} entries, ${c.herd} animals, ${c.milk} milk; uploaded ${result.uploads.sent}`, result.uploads.failed ? '⚠️' : '☁️');
         } catch (err) {
-          showToast('Sync failed. Redeploy Apps Script with doGet()', '⚠️');
+          showToast('Sync failed: ' + (err.message || 'unknown error'), '⚠️');
         }
       });
 

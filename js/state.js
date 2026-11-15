@@ -1,4 +1,6 @@
 // Dairy Khata — App State, Language & Add-Entry Renderers
+safeRemove(PIN_KEY);
+
 let state = {
         lang: 'te',
         tab: 'buffalo',
@@ -6,9 +8,9 @@ let state = {
         selectedCat: 'feed',
         authors: loadAuthors(),
         currentAuthor: safeGet(AUTHOR_KEY, 'Ramu'),
-        ownerPin: safeGet(PIN_KEY, '8012'),
         ownerUnlocked: false,
         pinBuffer: '',
+        pinVerifying: false,
         pendingProtectedAction: null,
         webhookUrl: safeGet(WEBHOOK_KEY, ''),
         amountStr: '0',
@@ -262,7 +264,6 @@ let state = {
         if (!state.azureApiUrl) return;
         try {
           const hdrs = { 'Content-Type': 'application/json' };
-          if (state.ownerUnlocked && state.ownerPin) hdrs['x-admin-pin'] = state.ownerPin;
           await fetch(state.azureApiUrl, {
             method: 'POST',
             headers: hdrs,
@@ -293,13 +294,25 @@ let state = {
         const d = new Date(entry.ts);
         const cat = findCat(entry.type, entry.catId);
         return postToSheet({
+          sheetTab: 'Entries',
+          id: entry.id,
           date: d.toLocaleDateString('en-IN'),
           time: d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           author: entry.author || 'Worker',
           type: entry.type === 'expense' ? 'Expense' : 'Income',
           category: cat.en,
           amount: entry.amount,
-          note: entry.note || ''
+          note: entry.note || '',
+          row: [
+            d.toLocaleDateString('en-IN'),
+            d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            entry.author || 'Worker',
+            entry.type === 'expense' ? 'Expense' : 'Income',
+            cat.en,
+            entry.amount,
+            entry.note || '',
+            entry.id
+          ]
         }, () => {
           entry.synced = true;
           saveEntries(state.entries);

@@ -14,6 +14,12 @@ function safeGet(key, fallback) {
         } catch (e) { /* sandbox fallback */ }
       }
 
+      function safeRemove(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) { /* sandbox fallback */ }
+      }
+
       function loadJson(key, fallbackFn) {
         try {
           const raw = localStorage.getItem(key);
