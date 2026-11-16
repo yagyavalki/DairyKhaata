@@ -20,7 +20,7 @@ header h1{font-family:'Manrope',sans-serif!important;font-size:19px!important;fo
 header .w-9{width:42px!important;height:42px!important;border-radius:14px!important;background:var(--dk-green)!important;box-shadow:0 6px 14px #246b4b2b!important}
 header .hidden.md\:flex{background:#e9ede5!important;border-radius:14px!important;padding:5px!important}
 header .hidden.md\:flex button{border-radius:10px!important;padding:9px 13px!important}
-header button#btn-owner-lock,header button#btn-lang{border-radius:11px!important;padding:9px 12px!important}
+header button#btn-owner-lock,header button#btn-header-settings,header button#btn-lang{border-radius:11px!important;padding:9px 12px!important}
 main{max-width:1440px!important;padding-top:26px!important}
 main>section:first-child>div{background:var(--dk-green-dark)!important;color:white!important;border:0!important;border-radius:18px!important;text-align:left!important;padding:15px 20px!important;box-shadow:var(--dk-shadow)!important;display:flex;align-items:center;justify-content:space-between}
 main>section:first-child #lbl-mini-exp{color:#ffb4aa!important;font-size:10px!important;letter-spacing:.14em!important}
@@ -78,6 +78,7 @@ nav.md\:hidden button.bg-emerald-50{background:#eaf3e7!important;color:var(--dk-
 nav.md\:hidden button span:first-child{font-size:19px}
 nav.md\:hidden button span:last-child{font-size:10px!important}
 .fixed.inset-0.z-50>div,.fixed.inset-0.z-40>div{border-radius:22px!important}
+#pin-modal{z-index:60!important}
 #pin-card{border-radius:24px!important}
 #toast{border-radius:14px!important;box-shadow:0 12px 32px #17251f24!important}
 @media(min-width:1024px){

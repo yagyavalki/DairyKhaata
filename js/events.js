@@ -118,6 +118,7 @@
       document.getElementById('pin-cancel').addEventListener('click', () => {
         state.pinBuffer = '';
         state.pendingProtectedAction = null;
+        document.getElementById('pin-subtitle').textContent = 'Enter 4-digit PIN';
         document.getElementById('pin-modal').classList.add('hidden');
       });
 
@@ -544,30 +545,38 @@
             showToast(TEXT[state.lang].futureDateToast, '⚠️');
             return;
           }
-          const entryTs = (chosenDate && chosenDate !== todayStr) ? new Date(chosenDate + 'T12:00:00').getTime() : Date.now();
-          const log = {
-            id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
-            shift,
-            buffalo: bufName,
-            liters,
-            fat: '7.0',
-            author: state.currentAuthor || 'Worker',
-            ts: entryTs
-          };
-          state.milkLogs.push(log);
-          safeSet(MILK_KEY, JSON.stringify(state.milkLogs));
-          const d = new Date(log.ts);
-          postToSheet({
-            sheetTab: 'Milk_Logs',
-            row: [d.toLocaleDateString('en-IN'), d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), log.author, log.shift, log.buffalo, log.liters, log.fat + '%', '', log.id]
-          });
-          litersInp.value = '';
-          delete state.milkDrafts[bufName];
-          playTone(880, 0.1);
-          showToast(`${TEXT[state.lang].milkSavedToast} ${liters} L`, '🥛');
-          const animals = getFilteredBuffaloes();
-          if (animals.length) state.herdCardIndex = (state.herdCardIndex + 1) % animals.length;
-          renderBuffaloView();
+          confirmSavePrompt(
+            'Confirm Milk Log',
+            `${liters} L`,
+            `${bufName} • ${shift === 'morning' ? '☀️ Morning' : '🌙 Evening'}`,
+            () => {
+              const entryTs = (chosenDate && chosenDate !== todayStr)
+                ? new Date(chosenDate + 'T12:00:00').getTime()
+                : Date.now();
+              const log = {
+                id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+                shift,
+                buffalo: bufName,
+                liters,
+                fat: '7.0',
+                author: state.currentAuthor || 'Worker',
+                ts: entryTs
+              };
+              state.milkLogs.push(log);
+              safeSet(MILK_KEY, JSON.stringify(state.milkLogs));
+              const d = new Date(log.ts);
+              postToSheet({
+                sheetTab: 'Milk_Logs',
+                row: [d.toLocaleDateString('en-IN'), d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), log.author, log.shift, log.buffalo, log.liters, log.fat + '%', '', log.id]
+              });
+              delete state.milkDrafts[bufName];
+              playTone(880, 0.1);
+              showToast(`${TEXT[state.lang].milkSavedToast} ${liters} L`, '🥛');
+              const animals = getFilteredBuffaloes();
+              if (animals.length) state.herdCardIndex = (state.herdCardIndex + 1) % animals.length;
+              renderBuffaloView();
+            }
+          );
           return;
         }
         const milkToggle = e.target.closest('.toggle-milking-btn');
@@ -855,13 +864,15 @@
           ? 'bg-amber-50/70 border border-amber-200/80 p-2 rounded-xl space-y-2 transition-colors'
           : 'bg-slate-200/80 border border-slate-300 p-2 rounded-xl space-y-2 transition-colors';
         box.querySelectorAll('.water-shift-tab').forEach(t => {
-          if (t === tab) {
-            t.className = chosen === 'morning'
-              ? 'water-shift-tab tap-btn py-2 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-900 shadow-xs'
-              : 'water-shift-tab tap-btn py-2 rounded-lg text-xs font-extrabold bg-slate-800 text-white shadow-xs';
-          } else {
-            t.className = 'water-shift-tab tap-btn py-2 rounded-lg text-xs font-bold text-slate-600';
-          }
+          const selected = t === tab;
+          t.setAttribute('aria-pressed', String(selected));
+          t.className = `water-shift-tab tap-btn flex items-center justify-center text-center py-2 rounded-lg text-xs ${
+            selected
+              ? chosen === 'morning'
+                ? 'font-extrabold bg-amber-400 text-slate-900 shadow-xs'
+                : 'font-extrabold bg-slate-800 text-white shadow-xs'
+              : 'font-bold text-slate-600'
+          }`;
         });
         playTone(540, 0.04);
       });
@@ -972,7 +983,7 @@
       const syncSetupButton = document.getElementById('btn-sync-setup');
       if (syncSetupButton) syncSetupButton.addEventListener('click', openSyncModal);
       document.getElementById('btn-open-sync-modal').addEventListener('click', openSyncModal);
-      document.getElementById('dnav-settings').addEventListener('click', openSyncModal);
+      document.getElementById('btn-header-settings').addEventListener('click', openSyncModal);
       document.getElementById('sync-modal-close').addEventListener('click', () => {
         document.getElementById('sync-modal').classList.add('hidden');
         document.getElementById('input-current-pin').value = '';
@@ -1069,13 +1080,26 @@
       });
 
       document.getElementById('btn-clear-webhook').addEventListener('click', () => {
-        state.webhookUrl = '';
-        safeSet(WEBHOOK_KEY, '');
-        document.getElementById('input-webhook-url').value = '';
-        document.getElementById('input-webhook-url').disabled = false;
-        document.getElementById('sync-modal').classList.add('hidden');
-        renderSyncStatus();
-        showToast('Disconnected from Google Sheet', '⚪');
+        if (!state.webhookUrl) {
+          showToast('No Google Sheet is connected', '⚠️');
+          return;
+        }
+
+        state.pinBuffer = '';
+        renderPinDots();
+        document.getElementById('pin-subtitle').textContent = 'Enter Owner PIN to confirm disconnect';
+        state.pendingProtectedAction = () => {
+          state.webhookUrl = '';
+          safeSet(WEBHOOK_KEY, '');
+          document.getElementById('input-webhook-url').value = '';
+          document.getElementById('input-webhook-url').disabled = false;
+          document.getElementById('sync-modal').classList.add('hidden');
+          document.getElementById('pin-subtitle').textContent = 'Enter 4-digit PIN';
+          renderSyncStatus();
+          showToast('Disconnected from Google Sheet', '⚪');
+        };
+        document.getElementById('pin-modal').classList.remove('hidden');
+        showToast('Enter Owner PIN to confirm disconnect', '🔐');
       });
 
       document.getElementById('btn-sync-pending').addEventListener('click', async () => {

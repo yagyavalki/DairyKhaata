@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dairy Khata — పాల డైరీ ఖర్చుల లెక్క</title>
+  <link rel="icon" type="image/png" href="./assets/dairy-farm-logo.png" />
+  <link rel="apple-touch-icon" href="./assets/dairy-farm-logo.png" />
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -19,11 +21,7 @@
   <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
     <div class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2.5 min-w-0">
-        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-          </svg>
-        </div>
+        <img src="./assets/dairy-farm-logo.png" alt="Dairy Farm logo" class="w-10 h-10 rounded-full object-cover shadow-sm shrink-0" />
         <div class="min-w-0">
           <h1 id="app-title" class="text-base font-extrabold text-slate-900 tracking-tight truncate leading-tight">డైరీ ఖాతా</h1>
           <p id="app-subtitle" class="text-[11px] font-medium text-slate-500 truncate">సులభమైన ఖర్చుల లెక్క</p>
@@ -36,11 +34,15 @@
         <button id="dnav-add" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">➕ Add Entry</button>
         <button id="dnav-health" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">🩺 Meds &amp; Vet</button>
         <button id="dnav-history" type="button" class="tap-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">👑 Admin</button>
-        <button id="dnav-settings" type="button" aria-label="Settings" class="tap-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 whitespace-nowrap">⚙️ <span class="hidden lg:inline">Settings</span></button>
       </div>
+      <div class="ml-auto flex items-center gap-2 shrink-0">
         <button id="btn-owner-lock" type="button" aria-label="Admin access" class="tap-btn px-2.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 border transition-colors bg-slate-100 text-slate-600 border-slate-200 shrink-0">
           <span id="lock-icon">🔒</span>
           <span id="lbl-lock-status">Admin</span>
+        </button>
+        <button id="btn-header-settings" type="button" aria-label="Settings" title="Settings" class="tap-btn px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 border border-slate-200 bg-slate-100 text-slate-700 shrink-0">
+          <span aria-hidden="true">⚙️</span>
+          <span class="hidden sm:inline">Settings</span>
         </button>
         <!-- Language Switcher -->
         <button id="btn-lang" type="button" class="tap-btn px-2.5 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-[11px]">
@@ -271,8 +273,8 @@
         </div>
         <div id="water-shift-box" class="bg-amber-50/70 border border-amber-200/80 p-2 rounded-xl space-y-2 transition-colors" data-shift="morning">
           <div class="grid grid-cols-2 gap-1 bg-white/80 p-1 rounded-xl border border-slate-200/60">
-            <button type="button" data-watershift="morning" class="water-shift-tab tap-btn py-2 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-900 shadow-xs">${state.lang === 'te' ? '☀️ ఉదయం' : '☀️ Morning'}</button>
-            <button type="button" data-watershift="evening" class="water-shift-tab tap-btn py-2 rounded-lg text-xs font-bold text-slate-600">${state.lang === 'te' ? '🌙 సాయంత్రం' : '🌙 Evening'}</button>
+            <button type="button" data-watershift="morning" aria-pressed="true" class="water-shift-tab tap-btn flex items-center justify-center text-center py-2 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-900 shadow-xs">${state.lang === 'te' ? '☀️ ఉదయం' : '☀️ Morning'}</button>
+            <button type="button" data-watershift="evening" aria-pressed="false" class="water-shift-tab tap-btn flex items-center justify-center text-center py-2 rounded-lg text-xs font-bold text-slate-600">${state.lang === 'te' ? '🌙 సాయంత్రం' : '🌙 Evening'}</button>
           </div>
           <div class="flex items-center gap-2">
             <input id="input-water-liters" type="number" step="0.5" min="0" max="999" placeholder="Water (L)" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-cyan-200 bg-white text-base font-extrabold text-cyan-700 text-right focus:outline-none focus:ring-2 focus:ring-cyan-500" />
@@ -580,7 +582,7 @@
 
   </main>
 
-  <!-- Modern 4-Tab Bottom Navigation -->
+  <!-- Mobile Bottom Navigation -->
   <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/80">
     <div class="max-w-md mx-auto grid grid-cols-4 px-2 py-1.5 gap-1">
       <button id="nav-buffalo" type="button" class="py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-emerald-700 bg-emerald-50 font-bold">
