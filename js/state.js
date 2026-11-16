@@ -282,23 +282,48 @@ let state = {
         }).join('');
       }
 
+      function getOfflineQueue() {
+        return loadJson(OFFLINE_QUEUE_KEY, () => []);
+      }
+
+      function saveOfflineQueue(q) {
+        safeSet(OFFLINE_QUEUE_KEY, JSON.stringify(q));
+      }
+
+      function queueOfflinePayload(payload) {
+        const q = getOfflineQueue();
+        q.push({ id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), payload, queuedAt: Date.now() });
+        saveOfflineQueue(q);
+        renderSyncStatus();
+      }
+
       function renderSyncStatus() {
         const dot = document.getElementById('sync-dot');
         const bannerText = document.getElementById('sync-banner-text');
         const syncPendingBtn = document.getElementById('btn-sync-pending');
-        if (!dot || !bannerText || !syncPendingBtn) return;
-        const pendingCount = state.entries.filter(e => !e.synced).length;
+        if (!bannerText || !syncPendingBtn) return;
+        const qCount = getOfflineQueue().length;
+        const pendingCount = Math.max(qCount, state.entries.filter(e => !e.synced).length);
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        if (isOffline) {
+          if (dot) dot.textContent = '🔴';
+          bannerText.textContent = pendingCount > 0
+            ? `📴 Offline (Saved on phone • ${pendingCount} queued)`
+            : '📴 Offline Mode (Saving to phone)';
+          syncPendingBtn.classList.add('hidden');
+          return;
+        }
 
         if (!state.webhookUrl) {
-          dot.textContent = '⚪';
+          if (dot) dot.textContent = '⚪';
           bannerText.textContent = TEXT[state.lang].notConnected;
           syncPendingBtn.classList.add('hidden');
         } else if (pendingCount > 0) {
-          dot.textContent = '🟡';
+          if (dot) dot.textContent = '🟡';
           bannerText.textContent = TEXT[state.lang].waitingSync.replace('{count}', String(pendingCount));
           syncPendingBtn.classList.remove('hidden');
         } else {
-          dot.textContent = '🟢';
+          if (dot) dot.textContent = '🟢';
           bannerText.textContent = TEXT[state.lang].synced;
           syncPendingBtn.classList.add('hidden');
         }
@@ -316,8 +341,13 @@ let state = {
         } catch (err) { /* offline fallback kept in localStorage */ }
       }
 
-      async function postToSheet(payload, onSynced) {
+      async function postToSheet(payload, onSynced, skipQueueOnFail) {
         if (!state.webhookUrl || !state.webhookUrl.startsWith('https://script.google.com/')) {
+          if (!skipQueueOnFail) queueOfflinePayload(payload);
+          return false;
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          if (!skipQueueOnFail) queueOfflinePayload(payload);
           return false;
         }
         try {
@@ -330,8 +360,38 @@ let state = {
           if (onSynced) onSynced();
           return true;
         } catch (err) {
+          if (!skipQueueOnFail) queueOfflinePayload(payload);
           return false;
         }
+      }
+
+      let isFlushingQueue = false;
+      async function flushOfflineQueue() {
+        if (isFlushingQueue) return 0;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return 0;
+        if (!state.webhookUrl || !state.webhookUrl.startsWith('https://script.google.com/')) return 0;
+        isFlushingQueue = true;
+        let syncedCount = 0;
+        try {
+          const q = getOfflineQueue();
+          const remaining = [];
+          for (const item of q) {
+            const ok = await postToSheet(item.payload, null, true);
+            if (ok) syncedCount++;
+            else remaining.push(item);
+          }
+          saveOfflineQueue(remaining);
+          for (const entry of state.entries) {
+            if (!entry.synced) {
+              const ok = await syncEntryToSheet(entry);
+              if (ok) syncedCount++;
+            }
+          }
+        } finally {
+          isFlushingQueue = false;
+          renderSyncStatus();
+        }
+        return syncedCount;
       }
 
       async function syncEntryToSheet(entry) {

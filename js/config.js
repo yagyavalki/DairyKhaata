@@ -7,6 +7,7 @@
       const LANG_KEY = 'dairy_khata_language_v1';
       const AUTHORS_LIST_KEY = 'dairy_khata_authors_list_v1';
       const WEBHOOK_KEY = 'dairy_khata_webhook_v1';
+      const OFFLINE_QUEUE_KEY = 'dairy_khata_offline_queue_v1';
       const PIN_KEY = 'dairy_khata_owner_pin_v1';
       const BUFFALO_KEY = 'dairy_khata_buffaloes_v1';
       const MILK_KEY = 'dairy_khata_milk_logs_v1';

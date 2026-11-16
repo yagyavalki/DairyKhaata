@@ -101,9 +101,16 @@ function renderBuffaloView() {
         const visibleAnimals = filteredAnimals;
 
         document.getElementById('val-herd-count').textContent = String(filteredAnimals.length);
-        document.getElementById('herd-card-position').textContent = filteredAnimals.length
-          ? `${state.herdCardIndex + 1} / ${filteredAnimals.length}`
-          : '0 / 0';
+        const showArrows = filteredAnimals.length > 2;
+        const prevBtn = document.getElementById('btn-herd-prev');
+        const nextBtn = document.getElementById('btn-herd-next');
+        const posEl = document.getElementById('herd-card-position');
+        if (prevBtn) { prevBtn.classList.toggle('hidden', !showArrows); prevBtn.disabled = !showArrows; }
+        if (nextBtn) { nextBtn.classList.toggle('hidden', !showArrows); nextBtn.disabled = !showArrows; }
+        if (posEl) {
+          posEl.classList.toggle('hidden', !showArrows);
+          posEl.textContent = filteredAnimals.length ? `${state.herdCardIndex + 1} / ${filteredAnimals.length}` : '0 / 0';
+        }
 
         if (filteredAnimals.length === 0) {
           herdContainer.innerHTML = `<div class="w-full text-center py-6 text-xs font-semibold text-slate-400">${t.noAnimalsMatch}</div>`;
@@ -177,6 +184,11 @@ function renderBuffaloView() {
               </div>
             `;
           }).join('');
+        }
+
+        const activeCard = herdContainer.children && herdContainer.children[state.herdCardIndex];
+        if (activeCard && typeof herdContainer.scrollTo === 'function') {
+          herdContainer.scrollTo({ left: Math.max(0, activeCard.offsetLeft - 8), behavior: 'smooth' });
         }
 
         // Helper: compute all checkup intervals for an AI record

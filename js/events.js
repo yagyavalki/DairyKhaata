@@ -1862,3 +1862,20 @@
       renderAll();
       pullSheetOnStartup();
       setTimeout(checkDueTestReminder, 350);
+
+      window.addEventListener('online', async () => {
+        renderSyncStatus();
+        const n = await flushOfflineQueue();
+        if (n > 0 && typeof showToast === 'function') {
+          showToast(`Back online! Synced ${n} offline record(s)`, '☁️');
+        }
+      });
+      window.addEventListener('offline', () => {
+        renderSyncStatus();
+        if (typeof showToast === 'function') {
+          showToast('Offline mode — saving all data on phone', '📴');
+        }
+      });
+      if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+        flushOfflineQueue();
+      }

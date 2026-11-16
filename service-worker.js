@@ -1,5 +1,6 @@
-const CACHE_NAME = 'dairy-khata-v1';
+const CACHE_NAME = 'dairy-khata-v2';
 const APP_ASSETS = [
+  './',
   './index.html',
   './manifest.webmanifest',
   './css/styles.css',

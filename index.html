@@ -260,7 +260,7 @@
         </div>
 
         <!-- Single-card swipe milk logger -->
-        <div id="buffalo-herd-list" class="herd-swipe-track flex justify-center pb-2">
+        <div id="buffalo-herd-list" class="herd-swipe-track flex justify-start pb-2">
           <!-- Populated by JS -->
         </div>
       </div>
@@ -277,8 +277,8 @@
         </div>
         <div id="water-shift-box" class="bg-amber-50/70 border border-amber-200/80 p-2 rounded-xl space-y-2 transition-colors" data-shift="morning">
           <div class="grid grid-cols-2 gap-1 bg-white/80 p-1 rounded-xl border border-slate-200/60">
-            <button type="button" data-watershift="morning" aria-pressed="true" class="water-shift-tab tap-btn flex items-center justify-center text-center py-2 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-900 shadow-xs">${state.lang === 'te' ? '☀️ ఉదయం' : '☀️ Morning'}</button>
-            <button type="button" data-watershift="evening" aria-pressed="false" class="water-shift-tab tap-btn flex items-center justify-center text-center py-2 rounded-lg text-xs font-bold text-slate-600">${state.lang === 'te' ? '🌙 సాయంత్రం' : '🌙 Evening'}</button>
+            <button type="button" data-watershift="morning" aria-pressed="true" class="water-shift-tab tap-btn flex items-center justify-center text-center py-2 rounded-lg text-xs font-extrabold bg-amber-400 text-slate-900 shadow-xs">☀️ ఉదయం</button>
+            <button type="button" data-watershift="evening" aria-pressed="false" class="water-shift-tab tap-btn flex items-center justify-center text-center py-2 rounded-lg text-xs font-bold text-slate-600">🌙 సాయంత్రం</button>
           </div>
           <div class="flex items-center gap-2">
             <input id="input-water-liters" type="number" step="0.5" min="0" max="999" placeholder="నీరు (లీటర్లు)" data-i18n-placeholder="waterPlaceholder" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-cyan-200 bg-white text-base font-extrabold text-cyan-700 text-right focus:outline-none focus:ring-2 focus:ring-cyan-500" />
