@@ -1,0 +1,26 @@
+{
+  "id": "./index.html",
+  "name": "Dairy Khata — Farm Ledger & Herd Tracker",
+  "short_name": "Dairy Khata",
+  "description": "A bilingual dairy farm ledger and herd tracker.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f5ef",
+  "theme_color": "#174b36",
+  "icons": [
+    {
+      "src": "./assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

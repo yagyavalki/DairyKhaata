@@ -42,6 +42,9 @@ A mobile-first, bilingual (**Telugu / English**) web app for tracking daily dair
 ### Folder Structure
 ```text
 ├── index.html          # Clean semantic HTML shell
+├── manifest.webmanifest # Android install metadata
+├── service-worker.js   # App-shell caching for installation/offline fallback
+├── assets/             # App logo and install icons
 ├── css/
 │   └── styles.css      # Custom styles & responsive animations
 ├── js/
@@ -50,7 +53,8 @@ A mobile-first, bilingual (**Telugu / English**) web app for tracking daily dair
 │   ├── state.js        # App state, language switcher & Add Entry renderers
 │   ├── herd.js         # Herd cards, Milk, Adjusted/Water & Health views
 │   ├── admin.js        # Admin reports, Milk Rate, Buffalo-Wise Status & charts
-│   └── events.js       # Event listeners, modals, reminders & app boot
+│   ├── events.js       # Event listeners, modals, reminders & app boot
+│   └── pwa.js          # Service worker registration
 └── README.md           # User & deployment guide
 ```
 
@@ -63,6 +67,9 @@ A mobile-first, bilingual (**Telugu / English**) web app for tracking daily dair
 6. In the app, open **⚙️ Sync & Settings** and save that URL. The app checks `doGet()` and the required sheet tabs before connecting. Change the PIN there by entering the current PIN and a new one; the server stores only a salted hash.
 
 App-to-sheet and sheet-to-app sync uses a stable `ID` column on each tab. The script adds IDs to existing rows and updates a row with the same ID instead of appending a duplicate. Use **Sync From Sheet** to merge changes from Sheets and upload app-only records; matching legacy rows are paired by their data during the first sync. Sync is non-destructive: deleting a row or record on one side does not delete it on the other.
+
+### Install on Android
+Host the app on an HTTPS site such as Cloudflare Pages and deploy the complete repository, including `manifest.webmanifest`, `service-worker.js`, and the icons in `assets/`. On Android, open the hosted app URL in Chrome, wait for the page to finish loading, then use **⋮ → Install app** (or **Add to Home screen**). The Apps Script `/exec` URL is only the Sheets backend; it is not the app URL to install. A local `file://` URL is not installable.
 
 The Apps Script URL is stored in that browser's local storage; set it separately on each device/browser. The PIN is verified by Apps Script and is not retained in browser storage. Do not use the development URL ending in `/dev` for the app connection.
 

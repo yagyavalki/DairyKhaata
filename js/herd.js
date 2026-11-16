@@ -19,7 +19,7 @@ function renderBuffaloView() {
         const todayWaterTotal = state.waterLogs.filter(w => isToday(w.ts)).reduce((sum, w) => sum + Number(w.liters || 0), 0);
         const waterTodayEl = document.getElementById('val-water-today');
         if (waterTodayEl) waterTodayEl.textContent = `+${todayWaterTotal} L`;
-        document.getElementById('val-milk-today').textContent = `${todayMilkTotal} L`;
+        document.getElementById('val-milk-today').textContent = `${todayMilkTotal.toFixed(2)} L`;
 
 
 
