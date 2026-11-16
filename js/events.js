@@ -1,5 +1,18 @@
 // Dairy Khata — Event Listeners, Modals, Reminders & Boot
 // Event Listeners
+      
+      const btnLangTe = document.getElementById('btn-lang-te');
+      const btnLangEn = document.getElementById('btn-lang-en');
+      function syncLangToggleUI() {
+        if (!btnLangTe || !btnLangEn) return;
+        const te = state.lang === 'te';
+        btnLangTe.className = te ? 'px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#174b36] text-white' : 'px-2.5 py-1 rounded-full text-[11px] font-bold text-[#646c66]';
+        btnLangEn.className = !te ? 'px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#174b36] text-white' : 'px-2.5 py-1 rounded-full text-[11px] font-bold text-[#646c66]';
+      }
+      if (btnLangTe) btnLangTe.addEventListener('click', () => { state.lang = 'te'; syncLangToggleUI(); playTone(620, 0.06); renderAll(); });
+      if (btnLangEn) btnLangEn.addEventListener('click', () => { state.lang = 'en'; syncLangToggleUI(); playTone(620, 0.06); renderAll(); });
+      syncLangToggleUI();
+
       document.getElementById('btn-lang').addEventListener('click', () => {
         state.lang = state.lang === 'te' ? 'en' : 'te';
         playTone(620, 0.06);
@@ -1022,6 +1035,18 @@
         return { counts, uploads };
       }
 
+      async function pullSheetOnStartup() {
+        const url = state.webhookUrl.trim();
+        if (!url.startsWith('https://script.google.com/')) return;
+        try {
+          const tabsMap = await fetchSheetTabs(url);
+          applyParsedTabs(tabsMap, true);
+          renderSyncStatus();
+        } catch (err) {
+          showToast('Could not load Google Sheet on startup: ' + (err.message || 'unknown error'), '⚠️');
+        }
+      }
+
       document.getElementById('btn-save-pin').addEventListener('click', async () => {
         const currentPin = document.getElementById('input-current-pin').value.trim();
         const newPin = document.getElementById('input-new-pin').value.trim();
@@ -1363,7 +1388,7 @@
       }
 
       // Merge records by stable ID and use content matching for pre-ID sheet rows.
-      function applyParsedTabs(tabsMap) {
+      function applyParsedTabs(tabsMap, silent = false) {
         let counts = { entries: 0, milk: 0, herd: 0, ai: 0 };
 
         if (Array.isArray(tabsMap.Entries)) {
@@ -1472,7 +1497,7 @@
         }
 
         renderAll();
-        playTone(880, 0.12);
+        if (!silent) playTone(880, 0.12);
         return counts;
       }
 
@@ -1834,4 +1859,5 @@
 
       switchTab('buffalo');
       renderAll();
+      pullSheetOnStartup();
       setTimeout(checkDueTestReminder, 350);

@@ -1,109 +1,67 @@
+/* Dairy Khata — Calm Farm Ledger Theme Override */
+:root {
+  --dk-brand: #174b36;
+  --dk-cream: #faf7f0;
+  --dk-sand: #f3efe6;
+  --dk-line: #e5dfd1;
+  --dk-gold: #c89b3c;
+  --dk-terra: #b84a39;
+  --dk-green: #246c47;
+  --dk-ink: #1f2923;
+  --dk-muted: #646c66;
+}
+body {
+  font-family: 'Plus Jakarta Sans', 'Noto Sans Telugu', sans-serif !important;
+  background-color: var(--dk-cream) !important;
+  color: var(--dk-ink) !important;
+}
+header.sticky {
+  background: rgba(250, 247, 240, 0.94) !important;
+  border-bottom: 1px solid var(--dk-line) !important;
+  box-shadow: 0 3px 16px rgba(23, 75, 54, 0.04) !important;
+}
+.bg-white {
+  background-color: #ffffff !important;
+  border-color: var(--dk-line) !important;
+}
+#view-buffalo > .lg\:col-span-5 { position: static !important; }
+.rounded-2xl, .rounded-3xl { border-radius: 22px !important; }
+.tap-btn { min-height: 44px; transition: transform 0.12s ease; }
+.tap-btn:active { transform: scale(0.97); }
+#btn-save, #btn-save-milk, #btn-save-water {
+  background-color: var(--dk-gold) !important;
+  border-color: var(--dk-gold) !important;
+  color: #ffffff !important;
+}
+#btn-save:hover, #btn-save-milk:hover, #btn-save-water:hover {
+  background-color: #ab8129 !important;
+}
+#dnav-buffalo.bg-white, #dnav-add.bg-white, #dnav-health.bg-white, #dnav-history.bg-white {
+  background-color: var(--dk-brand) !important;
+  color: #ffffff !important;
+}
+nav.fixed.bottom-0 {
+  background: rgba(250, 247, 240, 0.96) !important;
+  border-top: 1px solid var(--dk-line) !important;
+}
 
-/* Dairy Khata — Fieldwork redesign
-   Visual direction: contemporary farm operations console; warm paper, ink and harvest green.
-   Keeps the existing application markup and IDs so all workflows remain connected. */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&family=Noto+Sans+Telugu:wght@400;500;600;700&display=swap');
+/* Horizontal Snap-Scroll Herd Card Carousel */
+#buffalo-herd-list {
+  display: flex !important;
+  flex-direction: row !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory !important;
+  scroll-behavior: smooth !important;
+  gap: 14px !important;
+  padding: 4px 2px 12px !important;
+  -webkit-overflow-scrolling: touch;
+}
+#buffalo-herd-list::-webkit-scrollbar { height: 5px; }
+#buffalo-herd-list::-webkit-scrollbar-thumb { background: #d5cdbd; border-radius: 999px; }
+#buffalo-herd-list > div {
+  flex: 0 0 88% !important;
+  max-width: 340px !important;
+  scroll-snap-align: center !important;
+}
 
-:root{
-  --dk-ink:#17251f; --dk-muted:#758179; --dk-green:#246b4b; --dk-green-dark:#174b36;
-  --dk-lime:#d9edbd; --dk-paper:#f4f5ef; --dk-card:#fffefa; --dk-line:#e4e8df;
-  --dk-amber:#e9a83d; --dk-red:#c75b4c; --dk-shadow:0 12px 34px rgba(28,49,37,.07);
-}
-html{background:var(--dk-paper);scroll-behavior:smooth}
-body,button,input,select,textarea{font-family:'DM Sans','Noto Sans Telugu',sans-serif!important}
-body{background:var(--dk-paper)!important;color:var(--dk-ink)!important;letter-spacing:-.01em}
-button{cursor:pointer}
-::selection{background:#d9edbd;color:#174b36}
-header.sticky{background:rgba(248,249,244,.92)!important;border-bottom:1px solid var(--dk-line)!important;box-shadow:0 3px 20px rgba(27,44,34,.035)}
-header.sticky>div{max-width:1440px!important;padding-top:15px!important;padding-bottom:15px!important}
-header h1{font-family:'Manrope',sans-serif!important;font-size:19px!important;font-weight:800!important;letter-spacing:-.045em!important}
-header .w-9{width:42px!important;height:42px!important;border-radius:14px!important;background:var(--dk-green)!important;box-shadow:0 6px 14px #246b4b2b!important}
-header .hidden.md\:flex{background:#e9ede5!important;border-radius:14px!important;padding:5px!important}
-header .hidden.md\:flex button{border-radius:10px!important;padding:9px 13px!important}
-header button#btn-owner-lock,header button#btn-header-settings,header button#btn-lang{border-radius:11px!important;padding:9px 12px!important}
-main{max-width:1440px!important;padding-top:26px!important}
-main>section:first-child>div{background:var(--dk-green-dark)!important;color:white!important;border:0!important;border-radius:18px!important;text-align:left!important;padding:15px 20px!important;box-shadow:var(--dk-shadow)!important;display:flex;align-items:center;justify-content:space-between}
-main>section:first-child #lbl-mini-exp{color:#ffb4aa!important;font-size:10px!important;letter-spacing:.14em!important}
-main>section:first-child #val-today-exp{color:white!important;font-family:'Manrope',sans-serif!important;font-size:24px!important;margin:0!important}
-main section .bg-white.rounded-2xl, main section .bg-white.rounded-3xl{background:var(--dk-card)!important;border-color:var(--dk-line)!important;box-shadow:var(--dk-shadow)!important;border-radius:20px!important}
-main section .rounded-2xl.border,main section .rounded-xl.border{border-color:var(--dk-line)!important}
-main section h3,main section h2{font-family:'Manrope',sans-serif!important;letter-spacing:-.025em}
-main section .text-slate-400.uppercase{color:#8a968c!important;letter-spacing:.13em!important}
-main section .bg-slate-900{background:var(--dk-ink)!important}
-main section .bg-emerald-600,main section .bg-emerald-700{background:var(--dk-green)!important}
-main section .text-emerald-700,main section .text-emerald-800{color:var(--dk-green)!important}
-main section .border-emerald-200{border-color:#cfe0cf!important}
-main section .bg-emerald-50{background:#edf5e9!important}
-main section .bg-slate-50{background:#f7f8f3!important}
-main section .bg-slate-100{background:#edf0e9!important}
-main section .text-slate-500{color:var(--dk-muted)!important}
-main section .rounded-xl,main section .rounded-2xl{border-radius:14px}
-main section button{transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
-main section button:active{transform:translateY(1px) scale(.985)}
-main input,main select,main textarea, .fixed input,.fixed select{border-color:#dce3d9!important;border-radius:12px!important;background:#fbfcf8!important;min-height:42px}
-main input:focus,main select:focus,main textarea:focus{outline:none!important;border-color:#77a888!important;box-shadow:0 0 0 3px #246b4b18!important}
-#view-buffalo{gap:22px!important}
-#view-buffalo>.lg\:col-span-7>div:first-child{padding:19px!important}
-#view-buffalo #lbl-herd-title{font-size:13px!important;color:var(--dk-ink)!important;letter-spacing:-.02em!important}
-#view-buffalo #btn-toggle-add-buffalo{border-radius:11px!important;padding:10px 14px!important;background:var(--dk-green)!important}
-#view-buffalo #herd-filter-pills{gap:7px!important}
-#view-buffalo .herd-filter-btn{font-size:11px!important;padding:8px 12px!important;border-radius:999px!important}
-#view-buffalo .herd-filter-btn.bg-slate-900{background:var(--dk-ink)!important}
-#view-buffalo #buffalo-card-container{border-radius:18px!important}
-#view-buffalo .bg-gradient-to-br{border-radius:18px!important}
-#view-add{gap:22px!important}
-#view-add .bg-white.rounded-2xl{padding:19px!important}
-#view-add #category-grid{gap:10px!important}
-#view-add #category-grid button{min-height:88px!important;border-radius:15px!important;border:1px solid var(--dk-line)!important;background:#fbfcf8!important}
-#view-add #category-grid button:focus,#view-add #category-grid button.active{border-color:#79a98a!important;background:#edf5e9!important}
-#calc-overlay>div{border-radius:22px!important;background:var(--dk-card)!important;border-color:var(--dk-line)!important}
-#amount-display{font-family:'Manrope',sans-serif!important;font-size:clamp(36px,5vw,54px)!important}
-#btn-save{background:var(--dk-green)!important;border-radius:14px!important;box-shadow:0 8px 18px #246b4b25!important}
-#view-health,#view-history{gap:20px!important}
-#view-health>div,#view-history>div{min-width:0}
-#view-health .rounded-2xl,#view-history .rounded-2xl{border-radius:18px!important}
-#view-history .bg-slate-900.text-white{background:var(--dk-green-dark)!important}
-#view-history .bg-slate-900.text-white .text-rose-300{color:#ffb4aa!important}
-#view-history canvas{max-height:280px}
-#view-health button,#view-history button{border-radius:11px!important}
-#view-health .text-rose-700,#view-history .text-rose-700{color:var(--dk-red)!important}
-#view-health .bg-rose-50,#view-history .bg-rose-50{background:#fbefeb!important}
-#view-health .bg-amber-50,#view-history .bg-amber-50{background:#fbf3e4!important}
-#view-history .bg-blue-50{background:#edf3ef!important}
-#sync-banner,#sync-status{border-radius:14px}
-nav.md\:hidden{background:rgba(255,254,250,.94)!important;border-top:1px solid var(--dk-line)!important;box-shadow:0 -8px 28px rgba(25,43,31,.06)!important;padding:7px 10px calc(7px + env(safe-area-inset-bottom))!important}
-nav.md\:hidden>div{max-width:680px;margin:auto;gap:6px!important}
-nav.md\:hidden button{border-radius:13px!important;min-height:52px!important}
-nav.md\:hidden button.bg-emerald-50{background:#eaf3e7!important;color:var(--dk-green)!important}
-nav.md\:hidden button span:first-child{font-size:19px}
-nav.md\:hidden button span:last-child{font-size:10px!important}
-.fixed.inset-0.z-50>div,.fixed.inset-0.z-40>div{border-radius:22px!important}
-#pin-modal{z-index:60!important}
-#pin-card{border-radius:24px!important}
-#toast{border-radius:14px!important;box-shadow:0 12px 32px #17251f24!important}
-@media(min-width:1024px){
- main{padding-left:30px!important;padding-right:30px!important}
- #view-buffalo{grid-template-columns:minmax(320px,.82fr) minmax(0,1.18fr)!important}
- #view-add{grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr)!important}
- #calc-overlay{position:sticky!important;top:94px!important;align-self:start!important}
- #calc-overlay>div{max-height:calc(100vh - 120px)!important;overflow-y:auto}
-}
-@media(max-width:767px){
- header.sticky>div{padding:11px 14px!important;gap:8px!important}
- header h1{font-size:16px!important}
- header .w-9{width:37px!important;height:37px!important}
- header #lbl-lock-status{display:none}
- main{padding:15px 12px 94px!important}
- main>section:first-child{margin-bottom:14px!important}
- main>section:first-child>div{padding:13px 16px!important}
- main>section:first-child #val-today-exp{font-size:21px!important}
- #view-buffalo,#view-add,#view-health,#view-history{gap:13px!important}
- #view-buffalo>.lg\:col-span-5{position:static}
- #view-buffalo .bg-white.rounded-2xl,#view-add .bg-white.rounded-2xl{padding:14px!important}
- #view-add #category-grid button{min-height:76px!important}
- #calc-overlay{padding:0!important}
- #calc-overlay>div{border-radius:22px 22px 0 0!important;padding:17px!important;max-height:91vh!important}
-}
-@media(min-width:768px) and (max-width:1023px){
- main{padding-left:20px!important;padding-right:20px!important}
-}
+header.sticky > div { padding-top: 18px !important; padding-bottom: 18px !important; min-height: 76px !important; }

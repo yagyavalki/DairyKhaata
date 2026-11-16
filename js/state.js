@@ -161,6 +161,21 @@ let state = {
         const todayFilterBtn = document.querySelector('.filter-btn[data-filter="today"]');
         if (todayFilterBtn) todayFilterBtn.textContent = tdFull;
         document.getElementById('app-title').textContent = t.title;
+        const spSel = document.getElementById('input-buf-species');
+        if (spSel && spSel.options) {
+          const spMap = state.lang === 'te'
+            ? { Buffalo: '🐃 గేదె', Cow: '🐄 ఆవు' }
+            : { Buffalo: '🐃 Buffalo', Cow: '🐄 Cow' };
+          Array.from(spSel.options).forEach(opt => { if (spMap[opt.value]) opt.textContent = spMap[opt.value]; });
+        }
+        const brSel = document.getElementById('input-buf-breed');
+        if (brSel && brSel.options) {
+          const brMap = state.lang === 'te'
+            ? { Murrah: 'ముర్రా', Grade: 'గ్రేడ్', Jaffarabadi: 'జాఫరాబాది', 'HF / Jersey': 'హెచ్‌ఎఫ్ / జెర్సీ', 'Gir / Ongole': 'గిర్ / ఒంగోలు', Other: 'ఇతరాలు' }
+            : { Murrah: 'Murrah', Grade: 'Grade', Jaffarabadi: 'Jaffarabadi', 'HF / Jersey': 'HF / Jersey', 'Gir / Ongole': 'Gir / Ongole', Other: 'Other' };
+          Array.from(brSel.options).forEach(opt => { if (brMap[opt.value]) opt.textContent = brMap[opt.value]; });
+        }
+
         document.getElementById('app-subtitle').textContent = t.subtitle;
         document.getElementById('lbl-mini-exp').textContent = state.lang === 'te' ? `${tdFull} ఖర్చు` : `${tdFull} Spent`;
                 document.getElementById('lbl-mini-net').textContent = t.miniNet;

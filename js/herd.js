@@ -40,7 +40,7 @@ function renderBuffaloView() {
                   <div class="min-w-0">
                     <div class="flex items-center gap-1.5">
                       <span class="font-bold text-xs text-slate-900 truncate">${escapeHtml(m.buffalo)} (${shiftLbl})</span>
-                      <span class="px-1.5 py-0.5 rounded-md bg-slate-200/80 text-slate-700 text-[10px] font-bold">${escapeHtml(m.author || 'Worker')}</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-bold">${escapeHtml(m.author || 'Worker')}</span>
                     </div>
                     <div class="text-[11px] text-slate-500">${timeStr} • Fat ${escapeHtml(m.fat || '7.0')}%</div>
                   </div>
@@ -57,7 +57,7 @@ function renderBuffaloView() {
         // Populate Mother dropdown in Add Animal form
         const motherSel = document.getElementById('select-buf-mother');
         const curMother = motherSel.value;
-        motherSel.innerHTML = `<option value="">None (Purchased / Founder)</option>` +
+        motherSel.innerHTML = `${state.lang === "te" ? `<option value="">ఎవరూ లేరు (కొన్నది)</option>` : `<option value="">None (Purchased / Founder)</option>`}` +
           state.buffaloes.map(b => {
             const spIcon = b.species === 'Cow' ? '🐄' : '🐃';
             return `<option value="${escapeHtml(b.id)}">${spIcon} ${escapeHtml(b.name)}</option>`;
@@ -87,7 +87,7 @@ function renderBuffaloView() {
         const herdContainer = document.getElementById('buffalo-herd-list');
         const filteredAnimals = getFilteredBuffaloes();
         if (state.herdCardIndex >= filteredAnimals.length) state.herdCardIndex = 0;
-        const visibleAnimals = filteredAnimals.slice(state.herdCardIndex, state.herdCardIndex + 1);
+        const visibleAnimals = filteredAnimals;
 
         document.getElementById('val-herd-count').textContent = String(filteredAnimals.length);
         document.getElementById('herd-card-position').textContent = filteredAnimals.length
@@ -97,7 +97,7 @@ function renderBuffaloView() {
         if (filteredAnimals.length === 0) {
           herdContainer.innerHTML = `<div class="w-full text-center py-6 text-xs font-semibold text-slate-400">No animals match this filter</div>`;
         } else {
-          herdContainer.innerHTML = visibleAnimals.map(b => {
+          herdContainer.innerHTML = visibleAnimals.map((b, cIdx) => {
             const spIcon = b.species === 'Cow' ? '🐄' : '🐃';
             const bufLogs = state.milkLogs.filter(m => m.buffalo === b.name);
             const todayLogsBuf = bufLogs.filter(m => isToday(m.ts));
@@ -126,13 +126,13 @@ function renderBuffaloView() {
                         </div>
                         <div class="text-[11px] font-semibold text-slate-500">${escapeHtml(b.species || 'Buffalo')} • ${escapeHtml(b.breed)}</div>
                       </div>
-                      ${b.price ? `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[10px] font-bold">${formatINR(b.price)}</span>` : ''}
+                      ${b.price ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">${formatINR(b.price)}</span>` : ''}
                     </div>
 
                     <div class="flex flex-wrap gap-1">
-                      <span class="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold">☀️ ${todayMorn}L / 🌙 ${todayEve}L</span>
-                      <button type="button" data-togglemilk="${b.id}" class="toggle-milking-btn tap-btn px-2 py-0.5 rounded-md text-[10px] font-bold ${b.milking !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${b.milking !== false ? (state.lang === 'te' ? '🥛 పాలిచ్చేది' : '🥛 Milking') : (state.lang === 'te' ? '⏸️ ఎండినది' : '⏸️ Dry')}</button>
-                      <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold">${motherObj ? '👩 ' + escapeHtml(motherObj.name) : (isTe ? '🌱 మొదటిది' : '🌱 Founder')}</span>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold">☀️ ${todayMorn}L / 🌙 ${todayEve}L</span>
+                      <button type="button" data-togglemilk="${b.id}" class="toggle-milking-btn tap-btn inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${b.milking !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${b.milking !== false ? (state.lang === 'te' ? '🥛 పాలిచ్చేది' : '🥛 Milking') : (state.lang === 'te' ? '⏸️ ఎండినది' : '⏸️ Dry')}</button>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">${motherObj ? '👩 ' + escapeHtml(motherObj.name) : (isTe ? '🌱 మొదటిది' : '🌱 Founder')}</span>
                     </div>
 
                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-baseline justify-between">
@@ -242,7 +242,7 @@ function renderBuffaloView() {
           const kids = childrenMap[animal.id] || [];
           const indentPx = depth * 16;
           const prefix = depth === 0 ? '' : '└─ ';
-          const kidsBadge = kids.length > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">${kids.length} heir${kids.length > 1 ? 's' : ''}</span>` : '';
+          const kidsBadge = kids.length > 0 ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">${kids.length} heir${kids.length > 1 ? 's' : ''}</span>` : '';
           const nodeHtml = `
             <div style="margin-left:${indentPx}px" class="flex items-center justify-between px-2.5 py-1.5 rounded-xl border ${depth === 0 ? 'bg-emerald-50/50 border-emerald-200/70' : 'bg-slate-50 border-slate-200/70'} text-xs">
               <span class="font-bold text-slate-800 truncate">${prefix}${spIcon} ${escapeHtml(animal.name)} <span class="text-[10px] font-medium text-slate-500">(${escapeHtml(animal.breed)})</span></span>
