@@ -896,14 +896,28 @@
         if (liters <= 0) { showToast('Enter adjusted water liters!', '⚠️'); return; }
         const shift = document.getElementById('water-shift-box').dataset.shift || 'morning';
         confirmSavePrompt('Confirm Adjusted / Water', `+${liters} L`, `${shift === 'morning' ? '☀️ Morning' : '🌙 Evening'}`, () => {
-        state.waterLogs.push({
-          id: 'w_' + Date.now(),
+        const waterLog = {
+          id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
           shift,
           liters,
           author: state.currentAuthor || 'Worker',
           ts: Date.now()
-        });
+        };
+        state.waterLogs.push(waterLog);
         safeSet(WATER_KEY, JSON.stringify(state.waterLogs));
+        const wd = new Date(waterLog.ts);
+        postToSheet({
+          sheetTab: 'Water_Adjustment',
+          row: [
+            wd.toLocaleDateString('en-IN'),
+            wd.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            waterLog.author,
+            shift === 'morning' ? 'Morning' : 'Evening',
+            liters,
+            '',
+            waterLog.id
+          ]
+        });
         document.getElementById('input-water-liters').value = '';
         playTone(760, 0.08);
         showToast(`Logged +${liters} L Adjusted/Water`, '💧');
@@ -914,8 +928,29 @@
       document.getElementById('btn-save-milk-rate').addEventListener('click', () => {
         const newRate = parseFloat(document.getElementById('input-admin-milk-rate').value);
         if (!newRate || newRate <= 0) { showToast('Enter valid ₹/L rate', '⚠️'); return; }
+        const oldRate = state.milkRate;
         state.milkRate = newRate;
         safeSet(MILK_RATE_KEY, String(newRate));
+        if (oldRate !== newRate) {
+          const rId = 'rate_' + Date.now();
+          const rd = new Date();
+          if (Array.isArray(state.milkRateHistory)) {
+            state.milkRateHistory.push({ id: rId, oldRate, newRate, author: state.currentAuthor || 'Owner', ts: rd.getTime() });
+            if (typeof MILK_RATE_HISTORY_KEY !== 'undefined') safeSet(MILK_RATE_HISTORY_KEY, JSON.stringify(state.milkRateHistory));
+          }
+          postToSheet({
+            sheetTab: 'Milk_Rate_History',
+            row: [
+              rd.toLocaleDateString('en-IN'),
+              rd.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+              state.currentAuthor || 'Owner',
+              oldRate,
+              newRate,
+              '',
+              rId
+            ]
+          });
+        }
         state.entries.forEach(e => {
           if (e.type === 'income' && e.catId === 'milk' && e.liters > 0) {
             e.amount = Math.round(e.liters * newRate);
@@ -1709,6 +1744,26 @@
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(milkRows.length ? milkRows : [{ Date: '', Time: '', Author: '', Shift: '', Animal: '', Liters: '', 'Fat %': '', Note: '' }]), 'Milk_Logs');
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(herdRows.length ? herdRows : [{ 'Animal ID/Name': '', Species: '', Breed: '', 'Mother / Parent': '', 'Price (INR)': '', 'Added Date': '' }]), 'Herd_Tree');
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(aiRows.length ? aiRows : [{ 'AI Date': '', Animal: '', Species: '', 'Bull / Semen ID': '', Status: '', Author: '', Note: '' }]), 'Insemination_AI');
+            const waterRows = state.waterLogs.map(w => ({
+              Date: new Date(w.ts).toLocaleDateString('en-IN'),
+              Time: new Date(w.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+              Author: w.author || 'Worker',
+              Shift: String(w.shift || '').toLowerCase() === 'evening' ? 'Evening' : 'Morning',
+              'Liters (L)': Number(w.liters || 0),
+              Note: '',
+              ID: w.id || ''
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(waterRows.length ? waterRows : [{ Date: '', Time: '', Author: '', Shift: '', 'Liters (L)': '', Note: '', ID: '' }]), 'Water_Adjustment');
+            const rateRows = (state.milkRateHistory || []).map(r => ({
+              Date: new Date(r.ts).toLocaleDateString('en-IN'),
+              Time: new Date(r.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+              Author: r.author || 'Owner',
+              'Old Rate (INR/L)': r.oldRate,
+              'New Rate (INR/L)': r.newRate,
+              Note: '',
+              ID: r.id || ''
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rateRows.length ? rateRows : [{ Date: '', Time: '', Author: '', 'Old Rate (INR/L)': '', 'New Rate (INR/L)': state.milkRate, Note: '', ID: '' }]), 'Milk_Rate_History');
             XLSX.writeFile(wb, `Dairy_Khata_${new Date().toISOString().slice(0, 10)}.xlsx`);
             showToast('Excel (.xlsx) downloaded!', '📥');
             return;
