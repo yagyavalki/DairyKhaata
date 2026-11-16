@@ -12,14 +12,25 @@ function getAutoMilkShift() {
         });
       }
 
+function getLocalizedAiStatus(status, t) {
+        const statusLabels = {
+          'Waiting Check': t.aiStatusWaiting,
+          'Pregnant (PD+)': t.aiStatusPregnant,
+          'Repeat / Failed': t.aiStatusRepeat,
+          Calved: t.aiStatusCalved
+        };
+        return statusLabels[status] || status;
+      }
+
 function renderBuffaloView() {
+        const t = TEXT[state.lang];
         const todayMilkTotal = state.milkLogs
           .filter(m => isToday(m.ts))
           .reduce((sum, m) => sum + Number(m.liters || 0), 0);
         const todayWaterTotal = state.waterLogs.filter(w => isToday(w.ts)).reduce((sum, w) => sum + Number(w.liters || 0), 0);
         const waterTodayEl = document.getElementById('val-water-today');
-        if (waterTodayEl) waterTodayEl.textContent = `+${todayWaterTotal} L`;
-        document.getElementById('val-milk-today').textContent = `${todayMilkTotal.toFixed(2)} L`;
+        if (waterTodayEl) waterTodayEl.textContent = `+${todayWaterTotal} ${t.literShort}`;
+        document.getElementById('val-milk-today').textContent = `${todayMilkTotal.toFixed(2)} ${t.literShort}`;
 
 
 
@@ -32,7 +43,7 @@ function renderBuffaloView() {
           milkContainer.innerHTML = todayLogs.map(m => {
             const shiftIcon = m.shift === 'morning' ? '☀️' : '🌙';
             const shiftLbl = m.shift === 'morning' ? TEXT[state.lang].shiftMorn : TEXT[state.lang].shiftEve;
-            const timeStr = new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const timeStr = new Date(m.ts).toLocaleTimeString(state.lang === 'te' ? 'te-IN' : 'en-IN', { hour: '2-digit', minute: '2-digit' });
             return `
               <div class="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
                 <div class="flex items-center gap-2.5 min-w-0">
@@ -40,14 +51,14 @@ function renderBuffaloView() {
                   <div class="min-w-0">
                     <div class="flex items-center gap-1.5">
                       <span class="font-bold text-xs text-slate-900 truncate">${escapeHtml(m.buffalo)} (${shiftLbl})</span>
-                      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-bold">${escapeHtml(m.author || 'Worker')}</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[10px] font-bold">${escapeHtml(m.author || t.worker)}</span>
                     </div>
-                    <div class="text-[11px] text-slate-500">${timeStr} • Fat ${escapeHtml(m.fat || '7.0')}%</div>
+                    <div class="text-[11px] text-slate-500">${timeStr} • ${t.fat} ${escapeHtml(m.fat || '7.0')}%</div>
                   </div>
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
-                  <span class="font-extrabold text-sm text-blue-700 tabular-nums">${m.liters} L</span>
-                  <button type="button" data-delmilk="${m.id}" class="del-milk-btn tap-btn w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-center shrink-0" title="Delete"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                  <span class="font-extrabold text-sm text-blue-700 tabular-nums">${m.liters} ${t.literShort}</span>
+                  <button type="button" data-delmilk="${m.id}" class="del-milk-btn tap-btn w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-center shrink-0" title="${t.delete}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                 </div>
               </div>
             `;
@@ -57,7 +68,7 @@ function renderBuffaloView() {
         // Populate Mother dropdown in Add Animal form
         const motherSel = document.getElementById('select-buf-mother');
         const curMother = motherSel.value;
-        motherSel.innerHTML = `${state.lang === "te" ? `<option value="">ఎవరూ లేరు (కొన్నది)</option>` : `<option value="">None (Purchased / Founder)</option>`}` +
+        motherSel.innerHTML = `<option value="">${state.lang === 'te' ? 'ఎవరూ లేరు (కొనుగోలు / మూల పశువు)' : 'None (Purchased / Founder)'}</option>` +
           state.buffaloes.map(b => {
             const spIcon = b.species === 'Cow' ? '🐄' : '🐃';
             return `<option value="${escapeHtml(b.id)}">${spIcon} ${escapeHtml(b.name)}</option>`;
@@ -95,7 +106,7 @@ function renderBuffaloView() {
           : '0 / 0';
 
         if (filteredAnimals.length === 0) {
-          herdContainer.innerHTML = `<div class="w-full text-center py-6 text-xs font-semibold text-slate-400">No animals match this filter</div>`;
+          herdContainer.innerHTML = `<div class="w-full text-center py-6 text-xs font-semibold text-slate-400">${t.noAnimalsMatch}</div>`;
         } else {
           herdContainer.innerHTML = visibleAnimals.map((b, cIdx) => {
             const spIcon = b.species === 'Cow' ? '🐄' : '🐃';
@@ -122,27 +133,27 @@ function renderBuffaloView() {
                       <div class="min-w-0">
                         <div class="flex items-center gap-1">
                           <div class="text-sm font-extrabold text-slate-900 truncate">${spIcon} ${escapeHtml(b.name)}</div>
-                          <button type="button" data-delbuf="${b.id}" class="del-buf-btn tap-btn w-7 h-7 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-center shrink-0" title="Delete"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                          <button type="button" data-delbuf="${b.id}" class="del-buf-btn tap-btn w-7 h-7 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-center shrink-0" title="${t.delete}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                         </div>
-                        <div class="text-[11px] font-semibold text-slate-500">${escapeHtml(b.species || 'Buffalo')} • ${escapeHtml(b.breed)}</div>
+                        <div class="text-[11px] font-semibold text-slate-500">${b.species === 'Cow' ? t.dairyCow : t.dairyBuffalo} • ${escapeHtml(b.breed)}</div>
                       </div>
                       ${b.price ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">${formatINR(b.price)}</span>` : ''}
                     </div>
 
                     <div class="flex flex-wrap gap-1">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold">☀️ ${todayMorn}L / 🌙 ${todayEve}L</span>
-                      <button type="button" data-togglemilk="${b.id}" class="toggle-milking-btn tap-btn inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${b.milking !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${b.milking !== false ? (state.lang === 'te' ? '🥛 పాలిచ్చేది' : '🥛 Milking') : (state.lang === 'te' ? '⏸️ ఎండినది' : '⏸️ Dry')}</button>
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">${motherObj ? '👩 ' + escapeHtml(motherObj.name) : (isTe ? '🌱 మొదటిది' : '🌱 Founder')}</span>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold">☀️ ${todayMorn}${t.literShort} / 🌙 ${todayEve}${t.literShort}</span>
+                      <button type="button" data-togglemilk="${b.id}" class="toggle-milking-btn tap-btn inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${b.milking !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${b.milking !== false ? `🥛 ${t.milking}` : `⏸️ ${t.dry}`}</button>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">${motherObj ? '👩 ' + escapeHtml(motherObj.name) : `🌱 ${t.founder}`}</span>
                     </div>
 
                     <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-baseline justify-between">
                       <div>
-                        <div class="text-[10px] font-bold text-slate-400 uppercase">${getTodayFull()} Milk</div>
-                        <div class="text-lg font-extrabold text-blue-700 tabular-nums">${todayTotal} L</div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">${getTodayFull()} ${t.milk}</div>
+                        <div class="text-lg font-extrabold text-blue-700 tabular-nums">${todayTotal} ${t.literShort}</div>
                       </div>
                       <div class="text-right">
-                        <div class="text-[10px] font-bold text-slate-400 uppercase">All-Time</div>
-                        <div class="text-xs font-extrabold text-slate-700 tabular-nums">${allTimeTotal} L</div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">${t.allTimeMilk}</div>
+                        <div class="text-xs font-extrabold text-slate-700 tabular-nums">${allTimeTotal} ${t.literShort}</div>
                       </div>
                     </div>
                   </div>
@@ -158,10 +169,10 @@ function renderBuffaloView() {
                     ${state.ownerUnlocked ? `<label class="block text-[10px] font-bold text-slate-500">${TEXT[state.lang].milkDateLabel}<input type="date" max="${getTodayDateInputValue()}" value="${escapeHtml(draft.date || getTodayDateInputValue())}" class="card-milk-date mt-1 w-full px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-[11px] font-extrabold text-slate-700" /></label>` : ''}
                     <div class="flex items-center gap-1.5">
                       <input type="number" step="0.5" min="0" max="999" value="${escapeHtml(draft.liters || '')}" placeholder="${isTe ? 'లీటర్లు' : 'Liters'}" class="card-milk-input flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-white border border-blue-200 text-base font-extrabold text-blue-700 text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                      <button type="button" data-savemilkbuf="${escapeHtml(b.name)}" class="card-save-milk-btn tap-btn px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shrink-0">${TEXT[state.lang].saveMilkNext}</button>
+                      <button type="button" data-savemilkbuf="${escapeHtml(b.name)}" class="card-save-milk-btn tap-btn px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shrink-0">${t.saveMilkNext}</button>
                     </div>
                   </div>
-                  <button type="button" data-aibuf="${escapeHtml(b.name)}" class="ai-buf-btn tap-btn w-full py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-extrabold text-xs">${state.ownerUnlocked ? (state.lang === 'te' ? '+ 🧬 ఎద/గర్భం (AI)' : '+ 🧬 Log Insemination (AI)') : (state.lang === 'te' ? '🔒 🧬 ఎద/గర్భం (అడ్మిన్)' : '🔒 🧬 Log Insemination (Admin)')}</button>
+                  <button type="button" data-aibuf="${escapeHtml(b.name)}" class="ai-buf-btn tap-btn w-full py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-extrabold text-xs">${state.ownerUnlocked ? `+ 🧬 ${t.insemination}` : `🔒 🧬 ${t.insemination} (${t.owner})`}</button>
                 </div>
               </div>
             `;
@@ -191,7 +202,7 @@ function renderBuffaloView() {
             const diffDays = Math.round((dt - today) / 86400000);
             return {
               ...st,
-              dateLabel: dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+              dateLabel: dt.toLocaleDateString(state.lang === 'te' ? 'te-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
               diffDays
             };
           });
@@ -209,17 +220,19 @@ function renderBuffaloView() {
         alerts.sort((x, y) => x.diffDays - y.diffDays);
 
         if (alerts.length > 0) {
-          const hdr = state.lang === 'te' ? '📅 తదుపరి తనిఖీలు (Next Checkups)' : '📅 Upcoming Checkup Alerts';
+          const hdr = `📅 ${t.upcomingCheckups}`;
           upcomingBox.innerHTML = `<div class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">${hdr}</div>` +
             alerts.slice(0, 4).map(al => {
               const badgeCls = al.diffDays <= 0
                 ? 'bg-rose-50 border-rose-200 text-rose-700'
                 : (al.diffDays <= 7 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800');
-              const whenTxt = al.diffDays === 0 ? 'Today!' : (al.diffDays < 0 ? `${Math.abs(al.diffDays)}d overdue` : `in ${al.diffDays}d`);
+              const whenTxt = al.diffDays === 0
+                ? t.todayOverdue
+                : (al.diffDays < 0 ? t.overdue.replace('{count}', String(Math.abs(al.diffDays))) : t.inDays.replace('{count}', String(al.diffDays)));
               const lbl = state.lang === 'te' ? al.te : al.en;
               return `
                 <div class="flex items-center justify-between px-2.5 py-2 rounded-xl border text-[11px] font-bold ${badgeCls}">
-                  <span class="truncate">🔔 ${escapeHtml(al.animal)}: ${lbl} (Day ${al.day})</span>
+                  <span class="truncate">🔔 ${escapeHtml(al.animal)}: ${lbl} (${t.day} ${al.day})</span>
                   <span class="shrink-0 ml-2">${al.dateLabel} • ${whenTxt}</span>
                 </div>
               `;
@@ -242,7 +255,7 @@ function renderBuffaloView() {
           const kids = childrenMap[animal.id] || [];
           const indentPx = depth * 16;
           const prefix = depth === 0 ? '' : '└─ ';
-          const kidsBadge = kids.length > 0 ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">${kids.length} heir${kids.length > 1 ? 's' : ''}</span>` : '';
+          const kidsBadge = kids.length > 0 ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">${kids.length} ${t.heirs}</span>` : '';
           const nodeHtml = `
             <div style="margin-left:${indentPx}px" class="flex items-center justify-between px-2.5 py-1.5 rounded-xl border ${depth === 0 ? 'bg-emerald-50/50 border-emerald-200/70' : 'bg-slate-50 border-slate-200/70'} text-xs">
               <span class="font-bold text-slate-800 truncate">${prefix}${spIcon} ${escapeHtml(animal.name)} <span class="text-[10px] font-medium text-slate-500">(${escapeHtml(animal.breed)})</span></span>
@@ -253,9 +266,9 @@ function renderBuffaloView() {
         }
 
         const roots = childrenMap['__ROOT__'] || [];
-        document.getElementById('val-tree-families').textContent = `${roots.length} lineage${roots.length === 1 ? '' : 's'}`;
+        document.getElementById('val-tree-families').textContent = `${roots.length} ${t.lineage}`;
         if (roots.length === 0) {
-          treeEl.innerHTML = `<div class="text-center py-4 text-xs font-semibold text-slate-400">No animals in herd yet</div>`;
+          treeEl.innerHTML = `<div class="text-center py-4 text-xs font-semibold text-slate-400">${t.noAnimalsYet}</div>`;
         } else {
           treeEl.innerHTML = roots.map(r => `<div class="space-y-1">${renderTreeNode(r, 0)}</div>`).join('');
         }
@@ -263,7 +276,7 @@ function renderBuffaloView() {
         // Render Insemination Log List
         const aiListEl = document.getElementById('ai-log-list');
         if (state.aiLogs.length === 0) {
-          aiListEl.innerHTML = `<div class="text-center py-4 text-xs font-semibold text-slate-400">No insemination records yet</div>`;
+          aiListEl.innerHTML = `<div class="text-center py-4 text-xs font-semibold text-slate-400">${t.noAiRecords}</div>`;
         } else {
           aiListEl.innerHTML = [...state.aiLogs].sort((a, b) => b.ts - a.ts).map(a => {
             const sched = getCheckupSchedule(a);
@@ -272,7 +285,7 @@ function renderBuffaloView() {
               const statusDot = st.diffDays < 0 ? '✅' : (st.diffDays <= 7 ? '🔔' : '🗓️');
               return `
                 <div class="flex items-center justify-between text-[10px] py-0.5 border-b border-purple-100/80 last:border-0">
-                  <span class="font-bold text-slate-700">${statusDot} Day ${st.day}: ${lbl}</span>
+                  <span class="font-bold text-slate-700">${statusDot} ${t.day} ${st.day}: ${lbl}</span>
                   <span class="font-semibold text-purple-700">${st.dateLabel}</span>
                 </div>
               `;
@@ -282,10 +295,10 @@ function renderBuffaloView() {
               <div class="p-2.5 rounded-xl border border-slate-100 bg-slate-50/60 space-y-2">
                 <div class="flex items-center justify-between gap-2">
                   <div class="min-w-0">
-                    <div class="font-bold text-xs text-slate-900 truncate">${escapeHtml(a.animal)} • ${escapeHtml(a.status)}</div>
-                    <div class="text-[11px] text-slate-500">AI: ${escapeHtml(a.aiDate)}${a.bull ? ' • ' + escapeHtml(a.bull) : ''}${a.note ? ' • ' + escapeHtml(a.note) : ''}</div>
+                    <div class="font-bold text-xs text-slate-900 truncate">${escapeHtml(a.animal)} • ${escapeHtml(getLocalizedAiStatus(a.status, t))}</div>
+                    <div class="text-[11px] text-slate-500">${t.aiLog}: ${escapeHtml(a.aiDate)}${a.bull ? ' • ' + escapeHtml(a.bull) : ''}${a.note ? ' • ' + escapeHtml(a.note) : ''}</div>
                   </div>
-                  <button type="button" data-delai="${a.id}" class="del-ai-btn tap-btn w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-center shrink-0" title="Delete"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                  <button type="button" data-delai="${a.id}" class="del-ai-btn tap-btn w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-center shrink-0" title="${t.delete}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                 </div>
                 <div class="bg-purple-50/70 border border-purple-200/60 px-2.5 py-1.5 rounded-xl">
                   ${rowsHtml}

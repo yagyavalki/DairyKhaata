@@ -2,7 +2,7 @@
 safeRemove(PIN_KEY);
 
 let state = {
-        lang: 'te',
+        lang: safeGet(LANG_KEY, 'te') === 'en' ? 'en' : 'te',
         tab: 'buffalo',
         entryType: 'expense',
         selectedCat: 'feed',
@@ -71,10 +71,10 @@ let state = {
       }
 
       function getTodayShort() {
-        return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        return new Date().toLocaleDateString(state.lang === 'te' ? 'te-IN' : 'en-IN', { day: '2-digit', month: 'short' });
       }
       function getTodayFull() {
-        return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        return new Date().toLocaleDateString(state.lang === 'te' ? 'te-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
       }
       function getTodayDateInputValue() {
         const now = new Date();
@@ -163,15 +163,13 @@ let state = {
         document.getElementById('app-title').textContent = t.title;
         const spSel = document.getElementById('input-buf-species');
         if (spSel && spSel.options) {
-          const spMap = state.lang === 'te'
-            ? { Buffalo: '🐃 గేదె', Cow: '🐄 ఆవు' }
-            : { Buffalo: '🐃 Buffalo', Cow: '🐄 Cow' };
+          const spMap = { Buffalo: `🐃 ${TEXT[state.lang].dairyBuffalo}`, Cow: `🐄 ${TEXT[state.lang].dairyCow}` };
           Array.from(spSel.options).forEach(opt => { if (spMap[opt.value]) opt.textContent = spMap[opt.value]; });
         }
         const brSel = document.getElementById('input-buf-breed');
         if (brSel && brSel.options) {
           const brMap = state.lang === 'te'
-            ? { Murrah: 'ముర్రా', Grade: 'గ్రేడ్', Jaffarabadi: 'జాఫరాబాది', 'HF / Jersey': 'హెచ్‌ఎఫ్ / జెర్సీ', 'Gir / Ongole': 'గిర్ / ఒంగోలు', Other: 'ఇతరాలు' }
+            ? { Murrah: 'ముర్రా', Grade: 'స్థానిక సంకరం', Jaffarabadi: 'జాఫరాబాది', 'HF / Jersey': 'హెచ్‌ఎఫ్ / జెర్సీ', 'Gir / Ongole': 'గిర్ / ఒంగోలు', Other: 'ఇతరాలు' }
             : { Murrah: 'Murrah', Grade: 'Grade', Jaffarabadi: 'Jaffarabadi', 'HF / Jersey': 'HF / Jersey', 'Gir / Ongole': 'Gir / Ongole', Other: 'Other' };
           Array.from(brSel.options).forEach(opt => { if (brMap[opt.value]) opt.textContent = brMap[opt.value]; });
         }
@@ -209,11 +207,42 @@ let state = {
         document.getElementById('btn-lang').textContent = state.lang === 'te' ? 'EN' : 'తె';
         const isTe = state.lang === 'te';
         const setTxt = (id, te, en) => { const el = document.getElementById(id); if (el) el.textContent = isTe ? te : en; };
-        setTxt('dnav-buffalo', '🐃 గేదెలు', '🐃 Buffaloes');
-        setTxt('dnav-add', '➕ ఖర్చు / ఆదాయం', '➕ Add Entry');
-        setTxt('dnav-health', '🩺 మందులు & డాక్టర్', '🩺 Meds & Vet');
-        setTxt('dnav-history', '👑 అడ్మిన్', '👑 Admin');
-        const hMap = { Buffalo: isTe ? '🐃 గేదెలు మాత్రమే' : '🐃 Buffaloes Only', Cow: isTe ? '🐄 ఆవులు' : '🐄 Cows', heirs: isTe ? '👶 దూడలు ఉన్నవి' : '👶 With Heirs' };
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const value = t[el.dataset.i18n];
+          if (value) el.textContent = value;
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+          const value = t[el.dataset.i18nPlaceholder];
+          if (value) el.placeholder = value;
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+          const value = t[el.dataset.i18nTitle];
+          if (value) el.title = value;
+        });
+        document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+          const value = t[el.dataset.i18nAriaLabel];
+          if (value) el.setAttribute('aria-label', value);
+        });
+        setTxt('lbl-settings', t.settings, t.settings);
+        setTxt('lbl-total-income', t.totalIncome, t.totalIncome);
+        setTxt('lbl-total-spent', t.totalSpent, t.totalSpent);
+        setTxt('lbl-med-form-title', t.medicineTitle, t.medicineTitle);
+        setTxt('lbl-med-list-title', t.medicineHistory, t.medicineHistory);
+        setTxt('lbl-doc-form-title', t.doctorTitle, t.doctorTitle);
+        setTxt('lbl-doc-list-title', t.doctorHistory, t.doctorHistory);
+        setTxt('lbl-reminder-title', t.reminderTitle, t.reminderTitle);
+        setTxt('lbl-rem-okay', t.reminderOkay, t.reminderOkay);
+        setTxt('lbl-rem-contacted', t.reminderContacted, t.reminderContacted);
+        setTxt('lbl-rem-availability', t.doctorAvailability, t.doctorAvailability);
+        setTxt('lbl-rem-save', t.reminderSave, t.reminderSave);
+        setTxt('pin-title', t.pinTitle, t.pinTitle);
+        setTxt('btn-sync-pending', t.pendingSyncButton, t.pendingSyncButton);
+        setTxt('lbl-pull', t.syncFromSheetButton, t.syncFromSheetButton);
+        setTxt('dnav-buffalo', '🐃 పశువులు', '🐃 Herd');
+        setTxt('dnav-add', '➕ నమోదు చేయండి', '➕ Add Entry');
+        setTxt('dnav-health', '🩺 మందులు & వైద్యం', '🩺 Medicines & Vet');
+        setTxt('dnav-history', '👑 యజమాని', '👑 Owner');
+        const hMap = { Buffalo: `🐃 ${t.buffaloesOnly}`, Cow: `🐄 ${t.cows}`, heirs: `👶 ${t.withCalves}` };
         document.querySelectorAll('.herd-filter-btn').forEach(b => { if (hMap[b.dataset.hfilter]) b.textContent = hMap[b.dataset.hfilter]; });
         setTxt('lbl-water-title', '💧 నీరు / అదనపు సర్దుబాటు (L)', '💧 Adjusted / Water Added (L)');
         setTxt('lbl-water-sub', 'డిమాండ్ కోసం కలిపిన అదనపు నీరు', 'Log extra water/adjustment added to meet demand');
@@ -221,7 +250,7 @@ let state = {
         document.querySelectorAll('.water-shift-tab').forEach(b => {
           b.textContent = b.dataset.watershift === 'morning' ? `☀️ ${t.shiftMorn}` : `🌙 ${t.shiftEve}`;
         });
-        const fMap = { week: isTe ? '7 రోజులు' : '7 Days', month: isTe ? 'నెలవారీ' : 'Monthly', year: isTe ? 'వార్షిక' : 'Yearly', all: isTe ? 'అన్నీ' : 'All' };
+        const fMap = { week: t.sevenDays, month: t.thisMonth, year: t.thisYear, all: t.all };
         document.querySelectorAll('.filter-btn').forEach(b => { if (fMap[b.dataset.filter]) b.textContent = fMap[b.dataset.filter]; });
         setTxt('lbl-rate-title', '🥛 పాల ధర & వసూలు', '🥛 Milk Rate & Collection');
         setTxt('lbl-rate-sub', 'ధర × అమ్మిన లీటర్లు = రావాల్సిన మొత్తం', 'Rate × Sold Liters = Amount to Collect');
@@ -231,7 +260,7 @@ let state = {
         setTxt('lbl-admin-sold', 'అమ్మినవి', 'Sold');
         setTxt('lbl-admin-collect', 'రావాల్సినవి', 'To Collect');
         setTxt('lbl-buf-status-title', '🐃 గేదెల వారీగా వివరాలు', '🐃 Buffalo-Wise Status');
-        setTxt('lbl-buf-status-sub', 'పాలు vs మందులు, డాక్టర్ & దాణా ఖర్చు', 'Milk produced vs. Medicines, Vet & Feed share');
+        setTxt('lbl-buf-status-sub', 'పాల ఉత్పత్తి, మందులు, వైద్యం మరియు దాణా ఖర్చు', 'Milk produced vs. Medicines, Vet & Feed share');
         setTxt('save-modal-cancel', 'రద్దు', 'Cancel');
         setTxt('save-modal-ok', 'నిర్ధారించి సేవ్', 'Confirm & Save');
       }
@@ -262,15 +291,15 @@ let state = {
 
         if (!state.webhookUrl) {
           dot.textContent = '⚪';
-          bannerText.textContent = '☁️ Google Sheet: Not Connected';
+          bannerText.textContent = TEXT[state.lang].notConnected;
           syncPendingBtn.classList.add('hidden');
         } else if (pendingCount > 0) {
           dot.textContent = '🟡';
-          bannerText.textContent = `⏳ ${pendingCount} entry(s) waiting to sync`;
+          bannerText.textContent = TEXT[state.lang].waitingSync.replace('{count}', String(pendingCount));
           syncPendingBtn.classList.remove('hidden');
         } else {
           dot.textContent = '🟢';
-          bannerText.textContent = '✅ Synced with Google Sheet';
+          bannerText.textContent = TEXT[state.lang].synced;
           syncPendingBtn.classList.add('hidden');
         }
       }

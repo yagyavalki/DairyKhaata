@@ -9,12 +9,13 @@
         btnLangTe.className = te ? 'px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#174b36] text-white' : 'px-2.5 py-1 rounded-full text-[11px] font-bold text-[#646c66]';
         btnLangEn.className = !te ? 'px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-[#174b36] text-white' : 'px-2.5 py-1 rounded-full text-[11px] font-bold text-[#646c66]';
       }
-      if (btnLangTe) btnLangTe.addEventListener('click', () => { state.lang = 'te'; syncLangToggleUI(); playTone(620, 0.06); renderAll(); });
-      if (btnLangEn) btnLangEn.addEventListener('click', () => { state.lang = 'en'; syncLangToggleUI(); playTone(620, 0.06); renderAll(); });
+      if (btnLangTe) btnLangTe.addEventListener('click', () => { state.lang = 'te'; safeSet(LANG_KEY, state.lang); syncLangToggleUI(); playTone(620, 0.06); renderAll(); });
+      if (btnLangEn) btnLangEn.addEventListener('click', () => { state.lang = 'en'; safeSet(LANG_KEY, state.lang); syncLangToggleUI(); playTone(620, 0.06); renderAll(); });
       syncLangToggleUI();
 
       document.getElementById('btn-lang').addEventListener('click', () => {
         state.lang = state.lang === 'te' ? 'en' : 'te';
+        safeSet(LANG_KEY, state.lang);
         playTone(620, 0.06);
         renderAll();
       });
